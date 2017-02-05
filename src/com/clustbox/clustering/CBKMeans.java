@@ -1,24 +1,20 @@
 package com.clustbox.clustering;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Random;
 
 import net.sf.javaml.clustering.Clusterer;
-import net.sf.javaml.clustering.KMeans;
-import net.sf.javaml.clustering.evaluation.ClusterEvaluation;
-import net.sf.javaml.clustering.evaluation.SumOfSquaredErrors;
 import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.DefaultDataset;
 import net.sf.javaml.core.DenseInstance;
 import net.sf.javaml.core.Instance;
 import net.sf.javaml.distance.DistanceMeasure;
-import net.sf.javaml.distance.EuclideanDistance;
 import net.sf.javaml.tools.DatasetTools;
-import net.sf.javaml.tools.data.FileHandler;
 
+/**
+ * k-means implementation that specify initial centroids.
+ */
 public class CBKMeans implements Clusterer {
+
 	/**
 	 * The number of clusters.
 	 */
@@ -48,20 +44,6 @@ public class CBKMeans implements Clusterer {
 	 */
 	private Instance[] centroids;
 
-	private double[]  initCentroids; // centroids: the center of clusters for the first iteration
-
-	public CBKMeans() {
-		this(4);
-	}
-
-	public CBKMeans(int k) {
-		this(k, 100);
-	}
-
-	public CBKMeans(int clusters, int iterations) {
-		this(clusters, iterations, new EuclideanDistance());
-	}
-
 	/**
 	 * Create a new K-means clusterer with the given number of clusters and
 	 * iterations. Also the Random Generator for the clusterer is given as
@@ -75,21 +57,14 @@ public class CBKMeans implements Clusterer {
 	 * @param dm
 	 *            the distance measure to use
 	 */
-	public CBKMeans(int clusters, int iterations, DistanceMeasure dm) {
+	public CBKMeans(int clusters, int iterations, DistanceMeasure dm, Instance[] centroids) {
 		this.numberOfClusters = clusters;
 		this.numberOfIterations = iterations;
 		this.dm = dm;
+		this.centroids = centroids;
 		rg = new Random(System.currentTimeMillis());
 	}
 
-	public CBKMeans(int clusters, int iterations, DistanceMeasure dm, double[] initcentroids) {
-		this.numberOfClusters = clusters;
-		this.numberOfIterations = iterations;
-		this.dm = dm;
-		this.initCentroids = initcentroids; 
-		rg = new Random(System.currentTimeMillis());
-	}
-	
 	/**
 	 * Execute the KMeans clustering algorithm on the data set that is provided.
 	 * 
@@ -103,33 +78,10 @@ public class CBKMeans implements Clusterer {
 			throw new RuntimeException("The dataset should not be empty");
 		if (numberOfClusters == 0)
 			throw new RuntimeException("There should be at least one cluster");
-		// Place K points into the space represented by the objects that are
-		// being clustered. These points represent the initial group of
-		// centroids.
-		// DatasetTools.
+		/* we already have the initial centroids */
 		Instance min = DatasetTools.minAttributes(data);
 		Instance max = DatasetTools.maxAttributes(data);
-		this.centroids = new Instance[numberOfClusters];
 		int instanceLength = data.instance(0).noAttributes();
-		for (int j = 0; j < numberOfClusters; j++) {
-			// double[] randomInstance = new double[instanceLength];
-			// for (int i = 0; i < instanceLength; i++) {
-			// double dist = Math.abs(max.value(i) - min.value(i));
-			// randomInstance[i] = (float) (min.value(i) + rg.nextDouble() *
-			// dist);
-			//
-			// }
-			if(initCentroids != null && j == 0){
-				this.centroids[j] = new DenseInstance(initCentroids);
-				//System.out.println(Arrays.toString(this.centroids));
-			}
-			else{
-				double[] randomInstance = DatasetTools.getRandomInstance(data, rg);
-				//System.out.println(Arrays.toString(randomInstance));
-				this.centroids[j] = new DenseInstance(randomInstance);				
-			}
-		}
-		//System.out.println(Arrays.toString(this.centroids));
 		int iterationCount = 0;
 		boolean centroidsChanged = true;
 		boolean randomCentroids = true;
@@ -209,49 +161,6 @@ public class CBKMeans implements Clusterer {
 
 		}
 		return output;
-	}
-
-	public double intraCluster(Dataset[] datas, DistanceMeasure dm) {
-		double dw = 0, fw = 0;
-
-		for (int i = 0; i < datas.length; i++) {
-			for (int j = 0; j < datas[i].size(); j++) {
-				Instance x = datas[i].instance(j);
-				// calculate sum of intra cluster distances dw and count their
-				// number.
-				for (int k = j + 1; k < datas[i].size(); k++) {
-					Instance y = datas[i].instance(k);
-					double distance = dm.measure(x, y);
-					dw += distance;
-					fw++;
-				}
-			}
-		}
-		double wb = dw / fw;
-		return wb;
-	}
-
-	public double interCluster(Dataset[] datas, DistanceMeasure dm) {
-		double db = 0, fb = 0;
-
-		for (int i = 0; i < datas.length; i++) {
-			for (int j = 0; j < datas[i].size(); j++) {
-				Instance x = datas[i].instance(j);
-
-				// calculate sum of inter cluster distances dw and count their
-				// number.
-				for (int k = i + 1; k < datas.length; k++) {
-					for (int l = 0; l < datas[k].size(); l++) {
-						Instance y = datas[k].instance(l);
-						double distance = dm.measure(x, y);
-						db += distance;
-						fb++;
-					}
-				}
-			}
-		}
-		double wb = (db / fb);
-		return wb;
 	}
 
 }
