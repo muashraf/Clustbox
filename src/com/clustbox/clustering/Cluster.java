@@ -29,22 +29,40 @@ public class Cluster {
 			e.printStackTrace();
 		}
 		Instance[] initCentroids = new Instance[4];
-		for(int i=0; i<4 ; i++)
-		{
-			initCentroids [i] = data.get(i*10);
+		for(int j=5; j<50 ; j=j+5){
+			for(int i=0; i<4 ; i++)
+			{
+				initCentroids [i] = data.get(i*j);
+			}
+			
+			System.out.println("*****************Iteration: " + j/5 + "************************\n");
+			System.out.println("Running K-Means........\n");
+			CBKMeans cluster = new CBKMeans();
+			//double[] initCentriod = { 6.292500795048066, 2.2303537747886404, 3.803421765264713, 1.5086439695060503 };
+			Clusterer km = new CBKMeans(4, 10, new EuclideanDistance(), initCentroids);
+			//Clusterer km = new CBKMeans(3, 10, new EuclideanDistance());
+			Dataset[] clusters = km.cluster(data);
+			ClusterEvaluation sse = new SumOfSquaredErrors();
+			double sseScore = sse.score(clusters);
+			double intraClusterScore = cluster.intraCluster(clusters, new EuclideanDistance());
+			double interClusterScore = cluster.interCluster(clusters, new EuclideanDistance());
+			System.out.println("Sum of squared errors: " + sseScore + "\n intraCluster Score " + intraClusterScore
+					+ "\n interCluster Score: " + interClusterScore + "\n");
+			
+			System.out.println("Running K-Medoids........\n");
+			CBKMedoids mCluster = new CBKMedoids();
+			Clusterer kmed = new CBKMedoids(4, 10, new EuclideanDistance(), initCentroids);
+			Dataset[] medClusters = kmed.cluster(data);
+			
+			ClusterEvaluation medSSE = new SumOfSquaredErrors();
+			double medsseScore = medSSE.score(medClusters);
+			double medintraClusterScore = mCluster.intraCluster(medClusters, new EuclideanDistance());
+			double medinterClusterScore = mCluster.interCluster(medClusters, new EuclideanDistance());
+			System.out.println("Sum of squared errors: " + medsseScore + "\n intraCluster Score: " + medintraClusterScore
+					+ "\n interCluster Score: " + medinterClusterScore + "\n");
+			
+			
 		}
-
-		
-		CBKMeans cluster = new CBKMeans();
-		//double[] initCentriod = { 6.292500795048066, 2.2303537747886404, 3.803421765264713, 1.5086439695060503 };
-		Clusterer km = new CBKMeans(4, 10, new EuclideanDistance(), initCentroids);
-		//Clusterer km = new CBKMeans(3, 10, new EuclideanDistance());
-		Dataset[] clusters = km.cluster(data);
-		ClusterEvaluation sse = new SumOfSquaredErrors();
-		double sseScore = sse.score(clusters);
-		double intraClusterScore = cluster.intraCluster(clusters, new EuclideanDistance());
-		double interClusterScore = cluster.interCluster(clusters, new EuclideanDistance());
-		System.out.println("Sum of squared errors: " + sseScore + "\t intraCluster Score " + intraClusterScore
-				+ "\t interCluster Score " + interClusterScore);
 	}
+	
 }
