@@ -4,8 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.events.VerifyListener;
 import org.eclipse.swt.graphics.Point;
@@ -19,13 +24,16 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.custom.CLabel;
+import org.eclipse.wb.swt.SWTResourceManager;
 
 public class CBMain {
 
 	public static HashMap<String, String> formElements = new HashMap<String, String>();
-	private static Text dataFile;
+	private static Button btnRun;
 	private static Text noOfClusters;
 	private static Text centriodsSource;
+	private static Button btnChooseCentriodFile;
 
 	/**
 	 * Launch the application.
@@ -41,10 +49,20 @@ public class CBMain {
 
 		Group grpSourceFile = new Group(shlClustbox, SWT.NONE);
 		grpSourceFile.setText("Source File");
-		grpSourceFile.setBounds(10, 10, 508, 69);
+		grpSourceFile.setBounds(10, 60, 508, 69);
 
-		dataFile = new Text(grpSourceFile, SWT.BORDER);
+		Text dataFile = new Text(grpSourceFile, SWT.BORDER);
 		dataFile.setBounds(140, 30, 275, 21);
+		ModifyListener listener = new ModifyListener() {
+			public void modifyText(ModifyEvent e) {
+				if (dataFile.getText().length() == 0)
+					btnRun.setEnabled(false);
+				else {
+					btnRun.setEnabled(true);
+				}
+			}
+		};
+		dataFile.addModifyListener(listener);
 
 		Button btnChooseDataFile = new Button(grpSourceFile, SWT.NONE);
 		btnChooseDataFile.setBounds(423, 30, 75, 25);
@@ -76,11 +94,11 @@ public class CBMain {
 
 		Label lbldataFile = new Label(grpSourceFile, SWT.NONE);
 		lbldataFile.setBounds(10, 30, 125, 15);
-		lbldataFile.setText("Select Data File:");
+		lbldataFile.setText("*Select Data File:");
 
 		Group grpConfigurations = new Group(shlClustbox, SWT.NONE);
 		grpConfigurations.setText("Configurations");
-		grpConfigurations.setBounds(10, 102, 508, 303);
+		grpConfigurations.setBounds(10, 150, 508, 303);
 
 		Label lblNumberOfClusters = new Label(grpConfigurations, SWT.NONE);
 		lblNumberOfClusters.setBounds(10, 150, 125, 15);
@@ -89,18 +107,19 @@ public class CBMain {
 		noOfClusters = new Text(grpConfigurations, SWT.BORDER);
 		noOfClusters.setBounds(140, 150, 185, 21);
 		noOfClusters.addListener(SWT.Verify, new Listener() {
-		      public void handleEvent(Event e) {
-		        String string = e.text;
-		        char[] chars = new char[string.length()];
-		        string.getChars(0, chars.length, chars, 0);
-		        for (int i = 0; i < chars.length; i++) {
-		          if (!('0' <= chars[i] && chars[i] <= '9')) {
-		            e.doit = false;
-		            return;
-		          }
-		        }
-		      }
-		    });
+			public void handleEvent(Event e) {
+				String string = e.text;
+				char[] chars = new char[string.length()];
+				string.getChars(0, chars.length, chars, 0);
+				for (int i = 0; i < chars.length; i++) {
+					if (!('0' <= chars[i] && chars[i] <= '9')) {
+						e.doit = false;
+						return;
+					}
+				}
+			}
+		});
+		noOfClusters.setEnabled(false);
 
 		Label lblCentriodFile = new Label(grpConfigurations, SWT.NONE);
 		lblCentriodFile.setBounds(10, 200, 125, 15);
@@ -108,6 +127,7 @@ public class CBMain {
 
 		centriodsSource = new Text(grpConfigurations, SWT.BORDER);
 		centriodsSource.setBounds(140, 200, 275, 21);
+		centriodsSource.setEnabled(false);
 
 		Button btnChooseCentriodFile = new Button(grpConfigurations, SWT.NONE);
 		btnChooseCentriodFile.addSelectionListener(new SelectionAdapter() {
@@ -138,6 +158,7 @@ public class CBMain {
 		});
 		btnChooseCentriodFile.setBounds(423, 200, 75, 25);
 		btnChooseCentriodFile.setText("Choose File");
+		btnChooseCentriodFile.setEnabled(false);
 
 		String[] similarityItems = { "EuclideanDistance", "CosineSimilarity", "JaccardIndexSimilarity",
 				"ManhattanDistance", "MinkowskiDistance", "NormalizedEuclideanDistance",
@@ -154,63 +175,115 @@ public class CBMain {
 		Button bestK = new Button(grpConfigurations, SWT.CHECK);
 		bestK.setBounds(10, 70, 125, 16);
 		bestK.setText("Best K");
+		bestK.setSelection(true);
+		SelectionAdapter chkBtnListenerBestK = new SelectionAdapter() {
+			@Override
+			public void widgetSelected(final SelectionEvent e) {
+				Button button = (Button) e.widget;
+				if (button.getSelection()) {
+					noOfClusters.setText("");
+					noOfClusters.setEnabled(false);
+				} else {
+					noOfClusters.setEnabled(true);
+				}
+			}
+		};
+		bestK.addSelectionListener(chkBtnListenerBestK);
 
 		Button bestCentroid = new Button(grpConfigurations, SWT.CHECK);
 		bestCentroid.setBounds(10, 100, 125, 16);
 		bestCentroid.setText("Best Centroid");
+		bestCentroid.setSelection(true);
+		SelectionAdapter chkBtnListenerBestC = new SelectionAdapter() {
+			@Override
+			public void widgetSelected(final SelectionEvent e) {
+				Button button = (Button) e.widget;
+				if (button.getSelection()) {
+					centriodsSource.setText("");
+					centriodsSource.setEnabled(false);
+					btnChooseCentriodFile.setEnabled(false);
+				} else {
+					centriodsSource.setEnabled(true);
+					btnChooseCentriodFile.setEnabled(true);
+				}
+			}
+		};
+		bestCentroid.addSelectionListener(chkBtnListenerBestC);
 
 		Group grpAdditionalMetrices = new Group(shlClustbox, SWT.NONE);
-		grpAdditionalMetrices.setText("Additional Metrics");
-		grpAdditionalMetrices.setBounds(530, 102, 240, 303);
+		grpAdditionalMetrices.setText("Evaluation Metrics");
+		grpAdditionalMetrices.setBounds(530, 150, 240, 303);
+
+		Button sc = new Button(grpAdditionalMetrices, SWT.CHECK);
+		sc.setBounds(20, 35, 150, 16);
+		sc.setText("Silhouette Coefficient");
+		sc.setSelection(true);
+		sc.setEnabled(false);
 
 		Button sse = new Button(grpAdditionalMetrices, SWT.CHECK);
-		sse.setBounds(20, 35, 140, 16);
+		sse.setBounds(20, 70, 140, 16);
 		sse.setText("Sum Of Squared Errors");
 
 		Button scs = new Button(grpAdditionalMetrices, SWT.CHECK);
-		scs.setBounds(20, 70, 170, 16);
+		scs.setBounds(20, 105, 170, 16);
 		scs.setText("Sum Of Centroid Similarities");
 
 		Button aic = new Button(grpAdditionalMetrices, SWT.CHECK);
-		aic.setBounds(20, 105, 93, 16);
+		aic.setBounds(20, 140, 93, 16);
 		aic.setText("AIC");
 
 		Button bic = new Button(grpAdditionalMetrices, SWT.CHECK);
-		bic.setBounds(20, 140, 119, 16);
+		bic.setBounds(20, 175, 119, 16);
 		bic.setText("BIC");
 
 		Button cindex = new Button(grpAdditionalMetrices, SWT.CHECK);
-		cindex.setBounds(20, 175, 93, 16);
+		cindex.setBounds(20, 210, 93, 16);
 		cindex.setText("C-index");
 
 		Button dbIndex = new Button(grpAdditionalMetrices, SWT.CHECK);
-		dbIndex.setBounds(20, 210, 170, 16);
+		dbIndex.setBounds(20, 245, 170, 16);
 		dbIndex.setText("Davies-Bouldin index");
 
 		Button kMeans = new Button(shlClustbox, SWT.RADIO);
-		kMeans.setBounds(530, 42, 75, 16);
+		kMeans.setBounds(530, 95, 75, 16);
 		kMeans.setText("K-Means");
 
 		Button kMediod = new Button(shlClustbox, SWT.RADIO);
-		kMediod.setBounds(610, 42, 75, 16);
+		kMediod.setBounds(610, 95, 75, 16);
 		kMediod.setText("K-Mediod");
 
 		Button sameSized = new Button(shlClustbox, SWT.RADIO);
-		sameSized.setBounds(690, 42, 80, 16);
+		sameSized.setBounds(690, 95, 80, 16);
 		sameSized.setText("Same-sized");
 
-		Button btnCancel = new Button(shlClustbox, SWT.NONE);
-		btnCancel.setBounds(695, 450, 75, 25);
-		btnCancel.setText("Cancel");
-		btnCancel.addSelectionListener(new SelectionAdapter() {
+		SelectionAdapter radioBtnListener = new SelectionAdapter() {
+			@Override
+			public void widgetSelected(final SelectionEvent e) {
+				Button button = (Button) e.widget;
+				if (button.getSelection()) {
+					btnRun.setEnabled(true);
+				} else {
+					btnRun.setEnabled(false);
+				}
+			}
+		};
+
+		kMeans.addSelectionListener(radioBtnListener);
+		kMediod.addSelectionListener(radioBtnListener);
+		sameSized.addSelectionListener(radioBtnListener);
+
+		Button btnExit = new Button(shlClustbox, SWT.NONE);
+		btnExit.setBounds(695, 500, 75, 25);
+		btnExit.setText("Exit");
+		btnExit.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				shlClustbox.dispose();
 			}
 		});
 
-		Button btnRun = new Button(shlClustbox, SWT.NONE);
-		btnRun.setBounds(600, 450, 75, 25);
+		btnRun = new Button(shlClustbox, SWT.NONE);
+		btnRun.setBounds(600, 500, 75, 25);
 		btnRun.setText("Run");
 		btnRun.addSelectionListener(new SelectionAdapter() {
 			@Override
@@ -233,6 +306,7 @@ public class CBMain {
 				if (bestCentroid.getSelection()) {
 					formElements.put("bestCentroid", bestCentroid.getText());
 				}
+				formElements.put("sc", sc.getText());
 				if (sse.getSelection()) {
 					formElements.put("sse", sse.getText());
 				}
@@ -257,18 +331,32 @@ public class CBMain {
 				}
 			}
 		});
+		btnRun.setEnabled(false);
 
 		Button btnReset = new Button(shlClustbox, SWT.NONE);
-		btnReset.setBounds(504, 450, 75, 25);
+		btnReset.setBounds(504, 500, 75, 25);
 		btnReset.setText("Reset");
+		
+		CLabel lblNewLabel = new CLabel(shlClustbox, SWT.NONE);
+		lblNewLabel.setBounds(10, 10, 760, 20);
+		lblNewLabel.setText("CLUSTBOX: A black box of center-based clustering algorithms. To run the utility please enter the below form.");
+		
+		CLabel lblNewLabel_1 = new CLabel(shlClustbox, SWT.NONE);
+		lblNewLabel_1.setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_RED));
+		lblNewLabel_1.setFont(SWTResourceManager.getFont("Segoe UI", 8, SWT.NORMAL));
+		lblNewLabel_1.setBounds(10, 30, 760, 15);
+		lblNewLabel_1.setText("Important: note that the date source file and algorithum selection is mandatory. ");
 		btnReset.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				dataFile.setText("");
-				centriodsSource.setText("");
 				noOfClusters.setText("");
-				bestK.setSelection(false);
-				bestCentroid.setSelection(false);
+				noOfClusters.setEnabled(false);
+				centriodsSource.setText("");
+				centriodsSource.setEnabled(false);
+				btnChooseCentriodFile.setEnabled(false);
+				bestK.setSelection(true);
+				bestCentroid.setSelection(true);
 				sse.setSelection(false);
 				scs.setSelection(false);
 				aic.setSelection(false);
