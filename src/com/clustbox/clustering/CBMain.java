@@ -34,6 +34,8 @@ public class CBMain {
 	private static Text noOfClusters;
 	private static Text centriodsSource;
 	private static Button btnChooseCentriodFile;
+	private static Text dataFile;
+	private static boolean chkAlgo = false;
 
 	/**
 	 * Launch the application.
@@ -51,13 +53,13 @@ public class CBMain {
 		grpSourceFile.setText("Source File");
 		grpSourceFile.setBounds(10, 60, 508, 69);
 
-		Text dataFile = new Text(grpSourceFile, SWT.BORDER);
+		dataFile = new Text(grpSourceFile, SWT.BORDER);
 		dataFile.setBounds(140, 30, 275, 21);
 		ModifyListener listener = new ModifyListener() {
 			public void modifyText(ModifyEvent e) {
 				if (dataFile.getText().length() == 0)
 					btnRun.setEnabled(false);
-				else {
+				else if (chkAlgo && dataFile.getText().length() > 0) {
 					btnRun.setEnabled(true);
 				}
 			}
@@ -259,8 +261,9 @@ public class CBMain {
 		SelectionAdapter radioBtnListener = new SelectionAdapter() {
 			@Override
 			public void widgetSelected(final SelectionEvent e) {
+				chkAlgo = true;
 				Button button = (Button) e.widget;
-				if (button.getSelection()) {
+				if (button.getSelection() && dataFile.getText().length() > 0) {
 					btnRun.setEnabled(true);
 				} else {
 					btnRun.setEnabled(false);
@@ -336,16 +339,17 @@ public class CBMain {
 		Button btnReset = new Button(shlClustbox, SWT.NONE);
 		btnReset.setBounds(504, 500, 75, 25);
 		btnReset.setText("Reset");
-		
+
 		CLabel lblNewLabel = new CLabel(shlClustbox, SWT.NONE);
 		lblNewLabel.setBounds(10, 10, 760, 20);
-		lblNewLabel.setText("CLUSTBOX: A black box of center-based clustering algorithms. To run the utility please enter the below form.");
-		
+		lblNewLabel.setText(
+				"CLUSTBOX: A black box of center-based clustering algorithms. To run the utility please enter the below form.");
+
 		CLabel lblNewLabel_1 = new CLabel(shlClustbox, SWT.NONE);
 		lblNewLabel_1.setForeground(SWTResourceManager.getColor(SWT.COLOR_DARK_RED));
 		lblNewLabel_1.setFont(SWTResourceManager.getFont("Segoe UI", 8, SWT.NORMAL));
 		lblNewLabel_1.setBounds(10, 30, 760, 15);
-		lblNewLabel_1.setText("Important: note that the date source file and algorithum selection is mandatory. ");
+		lblNewLabel_1.setText("Important: note that the data source file and algorithm selection is mandatory. ");
 		btnReset.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
