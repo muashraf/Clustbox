@@ -112,16 +112,46 @@ public class CBMain {
 		SelectionAdapter radioBtnListener = new SelectionAdapter() {
 			@Override
 			public void widgetSelected(final SelectionEvent e) {
+				noOfClusters.setText("");
+				noOfClusters.setEnabled(false);
+				centriodsSource.setText("");
+				centriodsSource.setEnabled(false);
+				btnChooseCentriodFile.setEnabled(false);
+				bestK.setSelection(true);
+				bestCentroid.setSelection(true);
+				sse.setSelection(false);
+				scs.setSelection(false);
+				aic.setSelection(false);
+				bic.setSelection(false);
+				cindex.setSelection(false);
+				dbIndex.setSelection(false);
+				similarityMeasure.select(0);
+
 				chkAlgo = true;
 				Button button = (Button) e.widget;
+
 				if (button.getSelection() && dataFile.getText().length() > 0) {
 					btnRun.setEnabled(true);
 				} else {
 					btnRun.setEnabled(false);
 				}
+
+				if (button.getText().equals("Same-sized")) {
+					bestK.setEnabled(false);
+					bestCentroid.setEnabled(false);
+					noOfClusters.setEnabled(true);
+					centriodsSource.setEnabled(true);
+					btnChooseCentriodFile.setEnabled(true);
+				} else {
+					bestK.setEnabled(true);
+					bestCentroid.setEnabled(true);
+					noOfClusters.setEnabled(false);
+					centriodsSource.setEnabled(false);
+					btnChooseCentriodFile.setEnabled(false);
+				}
+
 			}
 		};
-
 		kMeans.addSelectionListener(radioBtnListener);
 		kMediod.addSelectionListener(radioBtnListener);
 		sameSized.addSelectionListener(radioBtnListener);
@@ -182,9 +212,10 @@ public class CBMain {
 				dataFileDailog.setFilterPath(centriodsSource.getText());
 
 				// Extension Name
-				dataFileDailog.setFilterNames(new String[] { "Text Files", "Word Files", "PDF Files" });
+				dataFileDailog.setFilterNames(new String[] { "CSV (Comma delimited) (*.csv)",
+						"Adobe Bridge Data (*.data)", "Excel Workbook (*.xlsx)" });
 				// Extension Type
-				dataFileDailog.setFilterExtensions(new String[] { "*.txt", "*.doc", "*.pdf" });
+				dataFileDailog.setFilterExtensions(new String[] { "*.csv", "*.data", "*.xlsx" });
 
 				// Calling open() will open and run the dialog.
 				// It will return the selected directory, or
@@ -206,7 +237,7 @@ public class CBMain {
 		String[] similarityItems = { "EuclideanDistance", "CosineSimilarity", "JaccardIndexSimilarity",
 				"ManhattanDistance", "MinkowskiDistance", "NormalizedEuclideanDistance",
 				"PearsonCorrelationCoefficient" };
-		similarityMeasure = new Combo(grpConfigurations, SWT.NONE);
+		similarityMeasure = new Combo(grpConfigurations, SWT.DROP_DOWN | SWT.READ_ONLY);
 		similarityMeasure.setItems(similarityItems);
 		similarityMeasure.select(0);
 		similarityMeasure.setBounds(140, 30, 185, 23);
@@ -229,7 +260,13 @@ public class CBMain {
 					centriodsSource.setText("");
 					centriodsSource.setEnabled(false);
 					btnChooseCentriodFile.setEnabled(false);
+					bestK.setSelection(true);
+					bestK.setEnabled(true);
 				} else {
+					bestK.setSelection(false);
+					bestK.setEnabled(false);
+					noOfClusters.setText("");
+					noOfClusters.setEnabled(false);
 					centriodsSource.setEnabled(true);
 					btnChooseCentriodFile.setEnabled(true);
 				}
@@ -309,9 +346,18 @@ public class CBMain {
 		btnRun.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
+
+				if (!formElements.isEmpty()) {
+					formElements.clear();
+				}
+
 				formElements.put("dataFile", dataFile.getText());
-				formElements.put("centriodsSource", centriodsSource.getText());
-				formElements.put("noOfClusters", noOfClusters.getText());
+				if (centriodsSource.getEnabled()) {
+					formElements.put("centriodsSource", centriodsSource.getText());
+				}
+				if (noOfClusters.getEnabled()) {
+					formElements.put("noOfClusters", noOfClusters.getText());
+				}
 				if (kMeans.getSelection()) {
 					formElements.put("kMeans", kMeans.getText());
 				}
@@ -321,13 +367,15 @@ public class CBMain {
 				if (sameSized.getSelection()) {
 					formElements.put("sameSized", sameSized.getText());
 				}
-				if (bestK.getSelection()) {
+				if (bestK.getEnabled() && bestK.getSelection()) {
 					formElements.put("bestK", bestK.getText());
 				}
-				if (bestCentroid.getSelection()) {
+				if (bestCentroid.getEnabled() && bestCentroid.getSelection()) {
 					formElements.put("bestCentroid", bestCentroid.getText());
 				}
-				formElements.put("sc", sc.getText());
+				if (sc.getSelection()) {
+					formElements.put("sc", sc.getText());
+				}
 				if (sse.getSelection()) {
 					formElements.put("sse", sse.getText());
 				}
@@ -430,9 +478,10 @@ public class CBMain {
 				dataFileDailog.setFilterPath(dataFile.getText());
 
 				// Extension Name
-				dataFileDailog.setFilterNames(new String[] { "Text Files", "Word Files", "PDF Files" });
+				dataFileDailog.setFilterNames(new String[] { "CSV (Comma delimited) (*.csv)",
+						"Adobe Bridge Data (*.data)", "Excel Workbook (*.xlsx)" });
 				// Extension Type
-				dataFileDailog.setFilterExtensions(new String[] { "*.txt", "*.doc", "*.pdf" });
+				dataFileDailog.setFilterExtensions(new String[] { "*.csv", "*.data", "*.xlsx" });
 
 				// Calling open() will open and run the dialog.
 				// It will return the selected directory, or
