@@ -1,8 +1,16 @@
 package com.clustbox.clustering;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 import java.io.IOException;
 import java.util.Random;
+
+import java.io.InputStream;
+import java.io.FileInputStream;
 
 import net.sf.javaml.clustering.Clusterer;
 import net.sf.javaml.clustering.KMeans;
@@ -12,98 +20,153 @@ import net.sf.javaml.core.Dataset;
 import net.sf.javaml.core.DefaultDataset;
 import net.sf.javaml.core.DenseInstance;
 import net.sf.javaml.core.Instance;
+import net.sf.javaml.distance.CosineSimilarity;
 import net.sf.javaml.distance.DistanceMeasure;
 import net.sf.javaml.distance.EuclideanDistance;
+import net.sf.javaml.distance.JaccardIndexSimilarity;
+import net.sf.javaml.distance.ManhattanDistance;
+import net.sf.javaml.distance.MinkowskiDistance;
+import net.sf.javaml.distance.NormalizedEuclideanDistance;
+import net.sf.javaml.distance.PearsonCorrelationCoefficient;
 import net.sf.javaml.tools.DatasetTools;
 import net.sf.javaml.tools.data.FileHandler;
 import net.sf.javaml.tools.weka.*;
 
 public class Cluster {
+	static Dataset data = null;
+	static DistanceMeasure dm;	
+	static HashMap<String,String> map;
+	static ClusterEvaluationWithNaturalFitness dbEval = new DaviesBouldinScore();
+	public enum Algo{
+		SimpleKMeans, IterativeKMeans, SimpleKMedoids, IterativeKMedoids
+	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
+		
+		Clusterer km;
+		/* Load the config file */
+		map = getProperty();
+		
 		/* Load a dataset */
-		Dataset data = null;
-		try {
-			data = FileHandler.loadDataset(new File("data/iris.data"), 4, ",");
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		/* params to be read from config file or gui input*/
-		int KMIN = 2;
-		int KMAX = 50;
-		DistanceMeasure dm = new EuclideanDistance();
-		ClusterEvaluation sse = new SumOfSquaredErrors();
-		ClusterEvaluationWithNaturalFitness dbEval = new DaviesBouldinScore();
-		
-		Clusterer km = new CBKMeans(KMIN, 100, dm);
-		Dataset[] bestClustersMean = km.cluster(data);
-		double bestScoreMean = dbEval.score(bestClustersMean);
-		
-		Clusterer kmed = new CBKMedoids(KMIN,100,dm);
-		Dataset[] bestClustersMedoid = km.cluster(data);
-		double bestScoreMedoid = dbEval.score(bestClustersMedoid);
-		
-		for(int k=KMIN+1; k < KMAX ; k++){
-	
-			//Instance[] initCentroids = new Instance[k];
-			
-			//for(int j=5; j<50 ; j=j+5){
+		data = FileHandler.loadDataset(new File(map.get("dataFile")), 4, ",");
 
-			//	for(int i=0; i<k ; i++)
-			//	{
-			//		initCentroids [i] = data.get(i*j);
-			//	}
-			
-			
-			
-			System.out.println("*****************Iteration with k: " + k + " ************************\n");
-			System.out.println("Running K-Means........\n");
-
-			km = new CBKMeans(k, 100, dm);//, initCentroids);
-
-			Dataset[] clustersMean = km.cluster(data);
-			
-			double sseScore = sse.score(clustersMean);
-			double intraClusterScore = intraCluster(clustersMean, dm);
-			double interClusterScore = interCluster(clustersMean, dm);
-			//double silH = getAvgSilhouetteValue(clusters, dm);
-
-			double tmpScoreMean = dbEval.score(clustersMean);
-			
-			System.out.println("Sum of squared errors: " + sseScore + "\n intraCluster Score " + intraClusterScore
-					+ "\n interCluster Score: " + interClusterScore + "\n  Davies-Bouldin index = " + tmpScoreMean);//Silhuette = " + silH + "\n");
-			
-			if(dbEval.compareScore(bestScoreMean, tmpScoreMean)) {
-				bestScoreMean = tmpScoreMean;
-				bestClustersMean = clustersMean;
+		/* Set the distance measure */
+		if(map.get("similarityMeasure").equals("CosineSimilarity"))
+			dm = new CosineSimilarity();
+		else if(map.get("similarityMeasure").equals("JaccardIndexSimilarity"))
+			dm = new JaccardIndexSimilarity();
+		else if(map.get("similarityMeasure").equals("ManhattanDistance"))
+			dm = new ManhattanDistance();	
+		else if(map.get("similarityMeasure").equals("MinkowskiDistance"))
+			dm = new MinkowskiDistance();
+		else if(map.get("similarityMeasure").equals("NormalizedEuclideanDistance"))
+			dm = new NormalizedEuclideanDistance(data);						
+		else if(map.get("similarityMeasure").equals("PearsonCorrelationCoefficient"))
+			dm = new PearsonCorrelationCoefficient();				
+		else 
+			dm = new EuclideanDistance();
+		
+		/* Run Simple KMeans or KMedoids with input K or centroids and return */
+		if(map.containsKey("SimpleKMeans") || map.containsKey("SimpleKMedoids"))
+		{
+			int k;
+			Instance[] centroids = null;
+			if(map.containsKey("noOfClusters")){
+				k = Integer.parseInt(map.get("noOfClusters"));
+			}
+			else if(map.containsKey("centroidsSource")){
+				Dataset initCentroidsDS = FileHandler.loadDataset(new File(map.get("centroidsSource")), 4, ",");
+				ArrayList<Instance> initCentroids = new ArrayList<Instance>();
+				for(Instance ins: initCentroidsDS)
+				{
+					initCentroids.add(ins);
+				}
+				centroids = initCentroids.toArray(new Instance[0]);
+				k = initCentroids.size();
+			}
+			else{
+				System.out.println("Error: Please provide either K or initial centroids for Simle KMeans/KMedoids run");
+				return;
 			}
 			
-			
-			
-			System.out.println("Running K-Medoids........\n");
-			kmed = new CBKMedoids(k, 100, dm);//, initCentroids);
-			Dataset[] ClustersMedoid = kmed.cluster(data);
-
-			ClusterEvaluation medSSE = new SumOfSquaredErrors();
-			double medsseScore = medSSE.score(ClustersMedoid);
-			double medintraClusterScore = intraCluster(ClustersMedoid, dm);
-			double medinterClusterScore = interCluster(ClustersMedoid, dm);
-			//double silHmed = getAvgSilhouetteValue(clusters, dm);
-			
-			double tmpScoreMedoid = dbEval.score(ClustersMedoid);
-			System.out.println("Sum of squared errors: " + medsseScore + "\n intraCluster Score: " + medintraClusterScore
-					+ "\n interCluster Score: " + medinterClusterScore + "\n  Davies-Bouldin index = " + tmpScoreMedoid);//Silhuette = " + silHmed + "\n");
-	
-			if(dbEval.compareScore(bestScoreMedoid, tmpScoreMedoid)) {
-				bestScoreMedoid = tmpScoreMedoid;
-				bestClustersMedoid = ClustersMedoid;
+			/* Run the KMeans or KMedoids Algo */
+			if(map.containsKey("SimpleKMedoids")){
+				km = new CBKMedoids(k, 100, dm, centroids);
+			}
+			else {
+				km = new CBKMeans(k, 100, dm, centroids);
 			}
 			
+			Dataset[] clusters = km.cluster(data);
+			int cnt=0;
+			for(Dataset clust: clusters)
+			{
+				cnt++;
+				FileHandler.exportDataset(clust,new File("Cluster-" + cnt + ".data"),false, ",");
+				System.out.println("Dumped cluster data to Cluster-" + cnt + ".data");
+			}
+			return;			
 		}
-		System.out.println("\n\n Best K for k-means is : " + bestClustersMean.length + " with best Davies-Bouldin index score " + bestScoreMean );
-		System.out.println("\n\n Best K for k-medoids is : " + bestClustersMedoid.length + " with best Davies-Bouldin index score " + bestScoreMedoid );
+		
+		/* Run the Iterative KMeans/KMedoids algorithms*/
+		else if (map.containsKey("IterativeKMeans") || map.containsKey("IterativeKMedoids")){
+			int k;
+			/* If K is given only run best Centroids assessment */
+			if(map.containsKey("noOfClusters")){
+				k = Integer.parseInt(map.get("noOfClusters"));
+				Instance[] bestCentroids = bestCentroids(k);
+				return;
+			}
+			else {
+				int KMIN = 2;
+				int KMAX = 10; //data.size()/2;
+				double bestScore = 0; //Initialize of least possible score
+				Dataset[] bestClusters;
+				for(k=KMIN; k<KMAX; k++){
+					Instance[] bestCentroids = bestCentroids(k);
+					if(map.containsKey("IterativeKMedoids")){
+						km = new CBKMedoids(k, 100, dm, bestCentroids);
+					}
+					else {
+						km = new CBKMeans(k, 100, dm, bestCentroids);
+					}
+					Dataset[] tempClusters = km.cluster(data);
+					double tempScore = dbEval.score(tempClusters);
+					System.out.println(tempScore);
+					if(dbEval.compareScore(bestScore, tempScore)) {
+						bestScore = tempScore;
+						bestClusters = tempClusters;
+					}
+				}
+			}
+		}
+	
+	}
+	
+	protected static Instance[] bestCentroids(int k){
+		Instance[] bestCentroids = null;
+		double bestScore = 0;
+		Dataset[] bestClusters;
+		for(int i=0; i<1000; i++){
+			Random rg = new Random(System.currentTimeMillis());
+			Dataset Centroids = DatasetTools.bootstrap(data, k, rg);
+			Clusterer km;
+			ArrayList<Instance> initCentroids = new ArrayList<Instance>();
+			for(Instance ins: Centroids)
+			{
+				initCentroids.add(ins);
+			}
+			Instance[] tempCentroids = initCentroids.toArray(new Instance[0]);
+			km = new CBKMeans(k, 100, dm, bestCentroids);
+			Dataset[] tempClusters = km.cluster(data);
+			double tempScore = dbEval.score(tempClusters);
+			System.out.println("bestC: " + tempScore);
+			if(dbEval.compareScore(bestScore, tempScore)) {
+				bestScore = tempScore;
+				bestCentroids = tempCentroids;
+			}
+		}
+		return bestCentroids;
 		
 	}
 
@@ -203,5 +266,25 @@ public class Cluster {
 		double wb = (db / fb);
 		return wb;
 	}
+	
+	protected static HashMap<String,String> getProperty()
+    {
+        Properties prop = new Properties();
+        HashMap<String,String>map = new HashMap<String,String>();
+        try
+        {
+            FileInputStream inputStream = new FileInputStream(new File("C:/test/test.prop"));
+            prop.load(inputStream);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Some issue finding or loading file....!!! " + e.getMessage());
+
+        }
+        for(String key : prop.stringPropertyNames()) {
+        	map.put(key, prop.getProperty(key)); 
+        }
+        return map;
+    }
 	
 }
