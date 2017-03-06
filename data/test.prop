@@ -1,0 +1,8 @@
+kmeans=K-Means
+dataFile=data/iris.data
+sse=1
+bestK=1
+bestCentroid=1
+similarityMeasure=EuclideanDistance
+centroidsSource=data/Csrc.txt
+IterativeKMeans=simplekmeans
