@@ -1,19 +1,14 @@
 package com.clustbox.clustering;
 
+import java.io.IOException;
 import java.util.HashMap;
-import java.util.Map;
-import java.util.ResourceBundle.Control;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.KeyAdapter;
-import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.events.VerifyEvent;
-import org.eclipse.swt.events.VerifyListener;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
@@ -25,10 +20,7 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
-import org.eclipse.swt.custom.CLabel;
 import org.eclipse.wb.swt.SWTResourceManager;
-
-import net.sf.javaml.clustering.IterativeKMeans;
 
 public class CBMain {
 
@@ -105,21 +97,6 @@ public class CBMain {
 		similarityMeasure.setItems(similarityItems);
 		similarityMeasure.select(0);
 		similarityMeasure.setBounds(530, 90, 240, 25);
-
-		// similarityMeasure.addSelectionListener(new SelectionAdapter() {
-		// public void widgetSelected(SelectionEvent e) {
-		// if (similarityMeasure.getSelectionIndex() != 0 && chkAlgo &&
-		// dataFile.getText().length() > 0) {
-		// btnRun.setEnabled(true);
-		// } else if (simpleKMeans.getSelection() ||
-		// simpleKMedoids.getSelection()
-		// || sameSizedKMeans.getSelection()) {
-		// btnRun.setEnabled(false);
-		// } else {
-		// btnRun.setEnabled(false);
-		// }
-		// }
-		// });
 	}
 
 	private void clustAlgo(Shell shlClustbox) {
@@ -398,9 +375,20 @@ public class CBMain {
 				} else
 					formElements.put("similarityMeasure", similarityMeasure.getText());
 
-				for (Map.Entry<String, String> entry : formElements.entrySet()) {
-					System.out.println("Keys: " + entry.getKey() + " Values: " + entry.getValue());
+				// for (Map.Entry<String, String> entry :
+				// formElements.entrySet()) {
+				// System.out.println("Keys: " + entry.getKey() + " Values: " +
+				// entry.getValue());
+				// }
+
+				Cluster cl = new Cluster();
+				try {
+					cl.runClustering(formElements);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
 				}
+
 			}
 		});
 	}
