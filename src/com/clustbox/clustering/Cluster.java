@@ -7,17 +7,32 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.io.IOException;
 import java.util.Random;
 
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.swt.widgets.Text;
+
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.io.FileInputStream;
 
 import net.sf.javaml.clustering.Clusterer;
 import net.sf.javaml.clustering.IterativeKMeans;
 import net.sf.javaml.clustering.KMeans;
 import net.sf.javaml.clustering.evaluation.ClusterEvaluation;
+import net.sf.javaml.clustering.evaluation.SumOfCentroidSimilarities;
 import net.sf.javaml.clustering.evaluation.SumOfSquaredErrors;
 import net.sf.javaml.clustering.evaluation.CIndex;
 import net.sf.javaml.core.Dataset;
@@ -38,24 +53,42 @@ import net.sf.javaml.tools.data.ARFFHandler;
 import net.sf.javaml.tools.data.StreamHandler;
 import net.sf.javaml.tools.weka.FromWekaUtils;
 import net.sf.javaml.clustering.evaluation.AICScore;
+import net.sf.javaml.clustering.evaluation.BICScore;
 //import net.sf.javaml.utils.ArrayUtils;
 
 public class Cluster {
 	public Dataset data = null;
 	public DistanceMeasure dm;
 	public HashMap<String, String> map;
-	public List evalMetrics;
 	public CIndex CIdx;
 	public ClusterEvaluationWithNaturalFitness dbEval = new DaviesBouldinScore();
 
 	// public enum Algo{
 	// SimpleKMeans, IterativeKMeans, SimpleKMedoids, IterativeKMedoids
 	// }
+	public Cluster() {
+	}
 
-	public void runClustering(HashMap formElements) throws IOException {
+	public void runClustering(HashMap formElements, Shell parent) throws IOException {
 
+		Display display = Display.getDefault();
+		Shell shlClustbox = new Shell(parent);
+		shlClustbox.setMinimumSize(new Point(800, 600));
+		shlClustbox.setSize(450, 300);
+		shlClustbox.setText("EXECUTE CLUSTBOX");
+		shlClustbox.setLayout(new FillLayout());
+		final Text text = new Text(shlClustbox, SWT.READ_ONLY | SWT.MULTI);
+		shlClustbox.open();
+		OutputStream out = new OutputStream() {
+			@Override
+			public void write(int b) throws IOException {
+				text.append(Character.toString((char) b));
+			}
+		};
+		System.setOut(new PrintStream(out));
+
+		// Text text = new Text(shlClustbox, SWT.READ_ONLY | SWT.MULTI);
 		Clusterer km;
-		evalMetrics = getEvalMetrics(formElements);
 		dm = getSimilarityMeasure(formElements.get("similarityMeasure"));
 
 		/* Load a dataset */
@@ -66,8 +99,10 @@ public class Cluster {
 		CreateOuputDir("Output");
 		File sFile = new File("Output/sFile.csv");
 		FileWriter fWrite = new FileWriter(sFile);
+
 		/* Run Simple KMeans or KMedoids with input K or centroids and return */
 		if (formElements.containsKey("simpleKMeans") || formElements.containsKey("simpleKMedoids")) {
+
 			int k;
 			Instance[] centroids = null;
 			if (formElements.containsKey("noOfClusters")) {
@@ -82,7 +117,8 @@ public class Cluster {
 				centroids = initCentroids.toArray(new Instance[0]);
 				k = initCentroids.size();
 			} else {
-				System.out.println("Error: Please provide either K or initial centroids for Simle KMeans/KMedoids run");
+				System.out
+						.println("Error: Please provide either K or initial centroids for Simple KMeans/KMedoids run");
 				return;
 			}
 
@@ -94,17 +130,33 @@ public class Cluster {
 			}
 
 			Dataset[] clusters = km.cluster(data);
+			System.out.println("\nEvaluation Scores: \n");
+			HashMap<String, Double> score = getEvalScores(formElements, clusters);
+			for (Entry<String, Double> entry : score.entrySet()) {
+				System.out.println(entry.getKey() + " = " + entry.getValue());
+			}
+
 			int cnt = 0;
+			System.out.println("\nClustered Data Output: \n");
 			for (Dataset clust : clusters) {
 				cnt++;
 				FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
-				System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
+				System.out.println("Output/Cluster-" + cnt + ".data");
 			}
+
+			while (!shlClustbox.isDisposed()) {
+				if (!display.readAndDispatch())
+					display.sleep();
+			}
+			display.dispose();
+
 			return;
 		}
 
 		/* Run the Iterative KMeans/KMedoids algorithms */
-		else if (formElements.containsKey("iterativeKMeans") || formElements.containsKey("iterativeKMedoids")) {
+		else if (formElements.containsKey("iterativeKMeans") || formElements.containsKey("iterativeKMedoids"))
+
+		{
 			int k;
 			/* If K is given only run best Centroids assessment */
 			if (formElements.containsKey("noOfClusters")) {
@@ -164,11 +216,58 @@ public class Cluster {
 				}
 			}
 		}
+
 	}
 
-	private List getEvalMetrics(HashMap formElements) {
+	private HashMap<String, Double> getEvalScores(HashMap<String, String> formElements, Dataset[] clustering) {
+		HashMap<String, Double> score = new HashMap<String, Double>();
+		List<String> metrics = getEvalMetrics(formElements);
+		for (String eval : metrics) {
+			if (eval.equals("sse")) {
+				ClusterEvaluation sse = new SumOfSquaredErrors();
+				score.put("Sum Of Squared Errors", sse.score(clustering));
+			} else if (eval.equals("scs")) {
+				ClusterEvaluation scs = new SumOfCentroidSimilarities();
+				score.put("Sum Of Centroid Similarities", scs.score(clustering));
+			} else if (eval.equals("aic")) {
+				ClusterEvaluation aic = new AICScore();
+				score.put("AIC Score", aic.score(clustering));
+			} else if (eval.equals("bic")) {
+				ClusterEvaluation bic = new BICScore();
+				score.put("BIC Score", bic.score(clustering));
+			} else if (eval.equals("cindex")) {
+				ClusterEvaluation cindex = new CIndex(dm);
+				score.put("C Index", cindex.score(clustering));
+			} else if (eval.equals("dbIndex")) {
+				score.put("Davies Bouldin Score", dbEval.score(clustering));
+			} else if (eval.equals("sc")) {
+				score.put("Silhouette Coefficient", getAvgSilhouetteValues(clustering, dm));
+			}
+		}
+		return score;
+	}
+
+	private List<String> getEvalMetrics(HashMap<String, String> formElements) {
 		// TODO Auto-generated method stub
-		return null;
+		List<String> eval = new ArrayList<String>();
+		for (Entry<String, String> elements : formElements.entrySet()) {
+			if (elements.getKey().equals("sse")) {
+				eval.add("sse");
+			} else if (elements.getKey().equals("scs")) {
+				eval.add("scs");
+			} else if (elements.getKey().equals("aic")) {
+				eval.add("aic");
+			} else if (elements.getKey().equals("bic")) {
+				eval.add("bic");
+			} else if (elements.getKey().equals("cindex")) {
+				eval.add("cindex");
+			} else if (elements.getKey().equals("dbIndex")) {
+				eval.add("dbIndex");
+			} else if (elements.getKey().equals("sc")) {
+				eval.add("sc");
+			}
+		}
+		return eval;
 	}
 
 	private DistanceMeasure getSimilarityMeasure(Object similarityElement) {

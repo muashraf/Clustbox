@@ -24,7 +24,7 @@ import org.eclipse.wb.swt.SWTResourceManager;
 
 public class CBMain {
 
-	public static HashMap<String, String> formElements = new HashMap<String, String>();
+	public HashMap<String, String> formElements = new HashMap<String, String>();
 
 	private Text dataFile;
 	private Text noOfClusters;
@@ -301,11 +301,11 @@ public class CBMain {
 		btnRun = new Button(shlClustbox, SWT.NONE);
 		btnRun.setBounds(600, 500, 75, 25);
 		btnRun.setText("Run");
-		submitForm();
+		submitForm(shlClustbox);
 		btnRun.setEnabled(false);
 	}
 
-	private void submitForm() {
+	private void submitForm(Shell shlClustbox) {
 		btnRun.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
@@ -383,7 +383,7 @@ public class CBMain {
 
 				Cluster cl = new Cluster();
 				try {
-					cl.runClustering(formElements);
+					cl.runClustering(formElements, shlClustbox);
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
