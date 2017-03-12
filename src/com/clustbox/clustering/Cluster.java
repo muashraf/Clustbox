@@ -27,17 +27,16 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.FileInputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import net.sf.javaml.clustering.Clusterer;
 import net.sf.javaml.clustering.IterativeKMeans;
-import net.sf.javaml.clustering.KMeans;
 import net.sf.javaml.clustering.evaluation.ClusterEvaluation;
 import net.sf.javaml.clustering.evaluation.SumOfCentroidSimilarities;
 import net.sf.javaml.clustering.evaluation.SumOfSquaredErrors;
 import net.sf.javaml.clustering.evaluation.CIndex;
 import net.sf.javaml.core.Dataset;
-import net.sf.javaml.core.DefaultDataset;
-import net.sf.javaml.core.DenseInstance;
 import net.sf.javaml.core.Instance;
 import net.sf.javaml.distance.CosineSimilarity;
 import net.sf.javaml.distance.DistanceMeasure;
@@ -60,8 +59,15 @@ public class Cluster {
 	public Dataset data = null;
 	public DistanceMeasure dm;
 	public HashMap<String, String> map;
+	public List evalMetrics;
 	public CIndex CIdx;
 	public ClusterEvaluationWithNaturalFitness dbEval = new DaviesBouldinScore();
+	public Display display;
+	public Shell shlClustbox;
+	public OutputStream out;
+	
+	private static final int bestC_THREADS = 1000;
+	
 
 	// public enum Algo{
 	// SimpleKMeans, IterativeKMeans, SimpleKMedoids, IterativeKMedoids
@@ -71,15 +77,15 @@ public class Cluster {
 
 	public void runClustering(HashMap formElements, Shell parent) throws IOException {
 
-		Display display = Display.getDefault();
-		Shell shlClustbox = new Shell(parent);
+		display = Display.getDefault();
+		shlClustbox = new Shell(parent);
 		shlClustbox.setMinimumSize(new Point(800, 600));
 		shlClustbox.setSize(450, 300);
 		shlClustbox.setText("EXECUTE CLUSTBOX");
 		shlClustbox.setLayout(new FillLayout());
 		final Text text = new Text(shlClustbox, SWT.READ_ONLY | SWT.MULTI);
 		shlClustbox.open();
-		OutputStream out = new OutputStream() {
+		out = new OutputStream() {
 			@Override
 			public void write(int b) throws IOException {
 				text.append(Character.toString((char) b));
@@ -87,22 +93,20 @@ public class Cluster {
 		};
 		System.setOut(new PrintStream(out));
 
-		// Text text = new Text(shlClustbox, SWT.READ_ONLY | SWT.MULTI);
 		Clusterer km;
+		evalMetrics = getEvalMetrics(formElements);
 		dm = getSimilarityMeasure(formElements.get("similarityMeasure"));
 
 		/* Load a dataset */
 		data = FileHandler.loadDataset(new File((String) formElements.get("dataFile")), 4, ",");
 
 		CIdx = new CIndex(dm);
-
+		//Create swt output window
 		CreateOuputDir("Output");
 		File sFile = new File("Output/sFile.csv");
 		FileWriter fWrite = new FileWriter(sFile);
-
 		/* Run Simple KMeans or KMedoids with input K or centroids and return */
 		if (formElements.containsKey("simpleKMeans") || formElements.containsKey("simpleKMedoids")) {
-
 			int k;
 			Instance[] centroids = null;
 			if (formElements.containsKey("noOfClusters")) {
@@ -117,8 +121,7 @@ public class Cluster {
 				centroids = initCentroids.toArray(new Instance[0]);
 				k = initCentroids.size();
 			} else {
-				System.out
-						.println("Error: Please provide either K or initial centroids for Simple KMeans/KMedoids run");
+				System.out.println("Error: Please provide either K or initial centroids for Simle KMeans/KMedoids run");
 				return;
 			}
 
@@ -137,7 +140,7 @@ public class Cluster {
 			}
 
 			int cnt = 0;
-			System.out.println("\nClustered Data Output: \n");
+			System.out.println("\nClustered Data Output Files: \n");
 			for (Dataset clust : clusters) {
 				cnt++;
 				FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
@@ -148,7 +151,8 @@ public class Cluster {
 				if (!display.readAndDispatch())
 					display.sleep();
 			}
-			display.dispose();
+			shlClustbox.dispose();
+			//display.dispose();
 
 			return;
 		}
@@ -161,59 +165,75 @@ public class Cluster {
 			/* If K is given only run best Centroids assessment */
 			if (formElements.containsKey("noOfClusters")) {
 				k = Integer.parseInt((String) formElements.get("noOfClusters"));
-				Instance[] bestCentroids = bestCentroids(k);
-				return;
-			} else {
-				int KMIN = 2;
-				int KMAX = data.size() / 2;
-				ClusterEvaluation tempEval = new AICScore();
-				IterativeKMeans ikm = new IterativeKMeans(2, 5, tempEval);
-				Dataset[] iClusters = ikm.cluster(data);
+				//Instance[] bestCentroids = bestCentroids(k);
+				bestCentroids(k);
+				
+				System.out.println("\nClustered Data Output Files: \n");
 				int cnt = 0;
-				for (Dataset clust : iClusters) {
-					cnt++;
-					FileHandler.exportDataset(clust, new File("Output/ClusterT-" + cnt + ".data"), false, ",");
-				}
-				System.out.println("IKMeans k = " + iClusters.length);
-
-				double bestScore = -1; // Initialize of least possible score
-				Dataset[] bestClusters = null;
-				for (k = KMIN; k < KMAX; k++) {
-					Instance[] bestCentroids = bestCentroids(k);
-					if (formElements.containsKey("iterativeKMedoids")) {
-						km = new CBKMedoids(k, 100, dm, bestCentroids);
-					} else {
-						km = new CBKMeans(k, 100, dm, bestCentroids);
-					}
-					Dataset[] tempClusters = km.cluster(data);
-					// double tempScore = CIdx.score(tempClusters);
-					double temp = intraCluster(tempClusters, dm);
-					double tempScore = getAvgSilhouetteValues(tempClusters, dm);// tempEval.score(tempClusters);//getAvgSilhouetteValues(tempClusters,
-																				// dm);
-					/* Save the first run output as best data */
-					if (k == KMIN) {
-						bestScore = tempScore;
-						bestClusters = tempClusters;
-					}
-					System.out.println("Score with k=" + k + " is " + tempScore);
-					fWrite.append(String.valueOf(tempScore));
-					if (k < KMAX - 1)
-						fWrite.append("\n");
-					// if( tempEval.compareScore(bestScore, tempScore)) {
-					if (tempScore > bestScore) {
-						bestScore = tempScore;
-						bestClusters = tempClusters;
-					}
-				}
-				fWrite.flush();
-				fWrite.close();
-				System.out.println("Best Score is:" + bestScore);
-				cnt = 0;
-				for (Dataset clust : bestClusters) {
+				for (Dataset clust : bestResult.bestClusters) {
 					cnt++;
 					FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
 					System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
 				}
+				
+				while (!shlClustbox.isDisposed()) {
+					if (!display.readAndDispatch())
+						display.sleep();
+				}
+				shlClustbox.dispose();
+				
+				return;
+				
+			} else {
+				int KMIN = 2;
+				int KMAX = 30;//data.size() / 3;
+
+				double bestScore = -1; // Initialize of least possible score
+				Dataset[] bestClusters = null;
+				for (k = KMIN; k < KMAX; k++) {
+					bestCentroids(k);
+//					Instance[] bestCentroids = bestCentroids(k);
+//					if (formElements.containsKey("iterativeKMedoids")) {
+//						km = new CBKMedoids(k, 100, dm, bestCentroids);
+//					} else {
+//						km = new CBKMeans(k, 100, dm, bestCentroids);
+//					}
+//					Dataset[] tempClusters = km.cluster(data);
+//					// double tempScore = CIdx.score(tempClusters);
+//					double temp = intraCluster(tempClusters, dm);
+//					double tempScore = getAvgSilhouetteValues(tempClusters, dm);// tempEval.score(tempClusters);//getAvgSilhouetteValues(tempClusters,
+//																				// dm);
+//					/* Save the first run output as best data */
+//					if (k == KMIN) {
+//						bestScore = tempScore;
+//						bestClusters = tempClusters;
+//					}
+//					System.out.println("Score with k=" + k + " is " + tempScore);
+//					fWrite.append(String.valueOf(tempScore));
+//					if (k < KMAX - 1)
+//						fWrite.append("\n");
+//					// if( tempEval.compareScore(bestScore, tempScore)) {
+//					if (tempScore > bestScore) {
+//						bestScore = tempScore;
+//						bestClusters = tempClusters;
+//					}
+				}
+				
+				fWrite.flush();
+				fWrite.close();
+				System.out.println("Best Silhouette Score is: " + bestResult.bestScore + " for K = " + bestResult.bestK);
+				System.out.println("\nClustered Data Output Files: \n");
+				int cnt = 0;
+				for (Dataset clust : bestResult.bestClusters) {
+					cnt++;
+					FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
+					System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
+				}
+				while (!shlClustbox.isDisposed()) {
+					if (!display.readAndDispatch())
+						display.sleep();
+				}
+				shlClustbox.dispose();
 			}
 		}
 
@@ -302,29 +322,41 @@ public class Cluster {
 		}
 	}
 
-	protected Instance[] bestCentroids(int k) {
-		Instance[] bestCentroids = null;
-		double bestScore = 0;
-		Dataset[] bestClusters;
-		for (int i = 0; i < 2; i++) {
-			Random rg = new Random(System.currentTimeMillis());
-			Dataset Centroids = DatasetTools.bootstrap(data, k, rg);
-			Clusterer km;
-			ArrayList<Instance> initCentroids = new ArrayList<Instance>();
-			for (Instance ins : Centroids) {
-				initCentroids.add(ins);
-			}
-			Instance[] tempCentroids = initCentroids.toArray(new Instance[0]);
-			km = new CBKMeans(k, 100, dm, bestCentroids);
-			Dataset[] tempClusters = km.cluster(data);
-			double tempScore = getAvgSilhouetteValues(tempClusters, dm);
-			// System.out.println("bestC: " + tempScore);
-			if (tempScore > bestScore) {
-				bestScore = tempScore;
-				bestCentroids = tempCentroids;
-			}
+	protected void bestCentroids(int k) {
+		System.out.println("Creating threads for best Centroids evaluation for K = " + k);
+		ExecutorService executor = Executors.newFixedThreadPool(bestC_THREADS);
+		for(int i = 0; i < 5; i++){
+			Runnable worker = new bestCentroidsC(k);
+			executor.execute(worker);
 		}
-		return bestCentroids;
+		executor.shutdown();
+		while (!executor.isTerminated()) {
+			 
+		}
+		//System.out.println("Best Silheoutte score for K = " + k + " is: " + bestResult.bestScore);
+		
+//		Instance[] bestCentroids = null;
+//		double bestScore = 0;
+//		Dataset[] bestClusters;
+//		for (int i = 0; i < 100; i++) {
+//			Random rg = new Random(System.currentTimeMillis());
+//			Dataset Centroids = DatasetTools.bootstrap(data, k, rg);
+//			Clusterer km;
+//			ArrayList<Instance> initCentroids = new ArrayList<Instance>();
+//			for (Instance ins : Centroids) {
+//				initCentroids.add(ins);
+//			}
+//			Instance[] tempCentroids = initCentroids.toArray(new Instance[0]);
+//			km = new CBKMeans(k, 100, dm, tempCentroids);
+//			Dataset[] tempClusters = km.cluster(data);
+//			double tempScore = getAvgSilhouetteValues(tempClusters, dm);
+//			// System.out.println("bestC: " + tempScore);
+//			if (tempScore > bestScore) {
+//				bestScore = tempScore;
+//				bestCentroids = tempCentroids;
+//			}
+//		}
+//		return bestCentroids;
 
 	}
 
@@ -447,5 +479,73 @@ public class Cluster {
 		}
 		return map;
 	}
+	
+	
+	public static class bestResult {
+		private static int bestK;
+		private static volatile double bestScore = -1;
+		private static Instance[] bestCentroids;
+		private static Dataset[] bestClusters;
+		private static final Object mutex = new Object();
+		
+		
+		public static void CompareAndUpdate(int k, double tempScore, Instance[] tempCentroids, Dataset[] tempClusters){
+			synchronized (mutex){
+				if(tempScore > bestScore){
+					//System.out.println("Updating Value");
+					bestScore = tempScore;
+					bestK = k;
+					bestCentroids = tempCentroids.clone();
+					bestClusters = tempClusters.clone();	
+				}
+			}
+		
+		}
+		
+	
+	}
+	
+	
+	public class bestCentroidsC implements Runnable {
+		private final int k;
+ 
+		bestCentroidsC(int k) {
+			this.k = k;
+		}
+ 
+		@Override
+		public void run() {
+ 
+			Random rg = new Random(System.currentTimeMillis());
+			Dataset Centroids = DatasetTools.bootstrap(data, k, rg);
+			Clusterer km;
+			ArrayList<Instance> initCentroids = new ArrayList<Instance>();
+			for (Instance ins : Centroids) {
+				initCentroids.add(ins);
+			}
+			Instance[] tempCentroids = initCentroids.toArray(new Instance[0]);
+			km = new CBKMeans(k, 100, dm, tempCentroids);
+			Dataset[] tempClusters = km.cluster(data);
+			double tempScore = getAvgSilhouetteValues(tempClusters, dm);
+			//System.out.println("bestC: " + tempScore);
+//			if (tempScore > bestScore) {
+//				bestScore = tempScore;
+//				bestCentroids = tempCentroids;
+//			}
+			bestResult.CompareAndUpdate(k, tempScore, tempCentroids, tempClusters);
+			
+		}
+	}
+	
+//	public static void println(String x) {
+//		final Object mutex = new Object();
+//	    synchronized (mutex) {
+//	        System.out.println(x);
+//	    }
+//	}
+	
+	
+	
+	
 
 }
