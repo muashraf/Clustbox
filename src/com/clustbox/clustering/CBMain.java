@@ -12,6 +12,7 @@ import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.FileDialog;
@@ -48,6 +49,8 @@ public class CBMain {
 	private Button dbIndex;
 
 	private Combo similarityMeasure;
+
+	private Group grpAdditionalMetrices;
 
 	/**
 	 * Launch the application.
@@ -142,32 +145,68 @@ public class CBMain {
 					centroidsSource.setText("");
 					centroidsSource.setEnabled(true);
 					btnCentroidsSource.setEnabled(true);
+					similarityMeasure.setEnabled(true);
+					int cnt = 0;
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						cnt++;
+						if (cnt > 1) {
+							child.setEnabled(true);
+						}
+					}
 				} else if (button.equals(iterativeKMeans)) {
 					noOfClusters.setText("");
 					noOfClusters.setEnabled(true);
 					centroidsSource.setText("");
 					centroidsSource.setEnabled(false);
 					btnCentroidsSource.setEnabled(false);
+					similarityMeasure.setEnabled(true);
+					int cnt = 0;
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						cnt++;
+						if (cnt > 1) {
+							child.setEnabled(true);
+						}
+					}
 				} else if (button.equals(sameSizedKMeans)) {
 					noOfClusters.setText("");
 					noOfClusters.setEnabled(true);
 					centroidsSource.setText("");
 					centroidsSource.setEnabled(false);
 					btnCentroidsSource.setEnabled(false);
+					similarityMeasure.setEnabled(false);
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						child.setEnabled(false);
+					}
+
 				} else if (button.equals(simpleKMedoids)) {
 					noOfClusters.setText("");
 					noOfClusters.setEnabled(true);
 					centroidsSource.setText("");
 					centroidsSource.setEnabled(true);
 					btnCentroidsSource.setEnabled(true);
+					similarityMeasure.setEnabled(true);
+					int cnt = 0;
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						cnt++;
+						if (cnt > 1) {
+							child.setEnabled(true);
+						}
+					}
 				} else if (button.equals(iterativeKMedoids)) {
 					noOfClusters.setText("");
 					noOfClusters.setEnabled(true);
 					centroidsSource.setText("");
 					centroidsSource.setEnabled(false);
 					btnCentroidsSource.setEnabled(false);
+					similarityMeasure.setEnabled(true);
+					int cnt = 0;
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						cnt++;
+						if (cnt > 1) {
+							child.setEnabled(true);
+						}
+					}
 				}
-
 				if ((button.equals(simpleKMeans) || button.equals(simpleKMedoids)) && dataFile.getText().length() > 0
 						&& (noOfClusters.getText().length() > 0 || centroidsSource.getText().length() > 0)) {
 					btnRun.setEnabled(true);
@@ -259,7 +298,7 @@ public class CBMain {
 	}
 
 	private void evalMetrics(Shell shlClustbox) {
-		Group grpAdditionalMetrices = new Group(shlClustbox, SWT.NONE);
+		grpAdditionalMetrices = new Group(shlClustbox, SWT.NONE);
 		grpAdditionalMetrices.setText("Evaluation Metrics");
 		grpAdditionalMetrices.setBounds(530, 150, 240, 300);
 		createMetrics(grpAdditionalMetrices);
