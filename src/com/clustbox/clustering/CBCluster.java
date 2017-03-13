@@ -76,12 +76,12 @@ public class CBCluster {
 	public Shell shlClustbox;
 	public OutputStream out;
 	
-	static int KMIN = 2;
-	static int KMAX = 30;//data.size() / 3;
+	static int KMIN;
+	static int KMAX;
 	
-	private static double[] sil4K = new double[KMAX];
+	private static double[] sil4K = new double[1000];
 	
-	private static final int bestC_THREADS = 1000;
+	private static final int bestC_THREADS = 100;
 	
 
 	// public enum Algo{
@@ -99,7 +99,7 @@ public class CBCluster {
 		shlClustbox.setSize(450, 300);
 		shlClustbox.setText("EXECUTE CLUSTBOX");
 		shlClustbox.setLayout(new FillLayout());
-		final Text text = new Text(shlClustbox, SWT.READ_ONLY | SWT.MULTI);
+		final Text text = new Text(shlClustbox, SWT.READ_ONLY | SWT.MULTI | SWT.V_SCROLL | SWT.WRAP);
 		shlClustbox.open();
 		out = new OutputStream() {
 			@Override
@@ -115,6 +115,9 @@ public class CBCluster {
 		/* Load a dataset */
 		data = FileHandler.loadDataset(new File((String) formElements.get("dataFile")), 4, ",");
 
+		KMIN = 2;
+		KMAX = data.size() / 4;
+		
 		CIdx = new CIndex(dm);
 		//Create swt output window
 		CreateOuputDir("Output");
@@ -175,14 +178,6 @@ public class CBCluster {
 				//Instance[] bestCentroids = bestCentroids(k);
 				bestCentroids(k);
 				
-				System.out.println("\nClustered Data Output Files: \n");
-				int cnt = 0;
-				for (Dataset clust : bestResult.bestClusters) {
-					cnt++;
-					FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
-					System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
-				}
-				
 			} else {
 
 				for (k = KMIN; k < KMAX; k++) {
@@ -193,13 +188,6 @@ public class CBCluster {
 				fWrite.close();
 				System.out
 						.println("Best Silhouette Score is: " + bestResult.bestScore + " for K = " + bestResult.bestK);
-				System.out.println("\nClustered Data Output Files: \n");
-				int cnt = 0;
-				for (Dataset clust : bestResult.bestClusters) {
-					cnt++;
-					FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
-					System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
-				}
 			}
 			
 			/* Run clustering one last time with the best K/best centroids achieved so far */
@@ -216,6 +204,14 @@ public class CBCluster {
 			HashMap<String, Double> score = getEvalScores(formElements, clusters);
 			for (Entry<String, Double> entry : score.entrySet()) {
 				System.out.println(entry.getKey() + " = " + entry.getValue());
+			}
+			
+			System.out.println("\nClustered Data Output Files: \n");
+			int cnt = 0;
+			for (Dataset clust : bestResult.bestClusters) {
+				cnt++;
+				FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
+				System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
 			}
 
 		}
@@ -361,9 +357,9 @@ public class CBCluster {
 	}
 
 	protected void bestCentroids(int k) {
-		System.out.println("Creating threads for best Centroids evaluation with K = " + k);
+		System.out.println("Creating " + bestC_THREADS + " threads for best Centroids evaluation with K = " + k);
 		ExecutorService executor = Executors.newFixedThreadPool(bestC_THREADS);
-		for(int i = 0; i < 5; i++){
+		for(int i = 0; i < bestC_THREADS; i++){
 			Runnable worker = new bestCentroidsC(k);
 			executor.execute(worker);
 		}
