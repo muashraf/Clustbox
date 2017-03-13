@@ -79,7 +79,7 @@ public class CBCluster {
 	static int KMIN;
 	static int KMAX;
 	
-	private static double[] sil4K = new double[1000];
+	private static double[] sil4K;
 	
 	private static final int bestC_THREADS = 100;
 	
@@ -88,7 +88,6 @@ public class CBCluster {
 	// SimpleKMeans, IterativeKMeans, SimpleKMedoids, IterativeKMedoids
 	// }
 	public CBCluster() {
-		Arrays.fill(sil4K, -1);
 	}
 
 	public void runClustering(HashMap formElements, Shell parent) throws IOException {
@@ -117,6 +116,8 @@ public class CBCluster {
 
 		KMIN = 2;
 		KMAX = data.size() / 4;
+		sil4K = new double[KMAX];
+		Arrays.fill(sil4K, -1);
 		
 		CIdx = new CIndex(dm);
 		//Create swt output window
@@ -184,8 +185,7 @@ public class CBCluster {
 					bestCentroids(k);
 				}
 				
-				fWrite.flush();
-				fWrite.close();
+
 				System.out
 						.println("Best Silhouette Score is: " + bestResult.bestScore + " for K = " + bestResult.bestK);
 			}
@@ -213,6 +213,12 @@ public class CBCluster {
 				FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
 				System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
 			}
+			
+			for(int i=2; i < sil4K.length; i++)
+				fWrite.write(String.valueOf(sil4K[i]));
+			
+			fWrite.flush();
+			fWrite.close();
 
 		}
 
