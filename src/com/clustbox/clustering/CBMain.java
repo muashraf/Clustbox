@@ -420,7 +420,7 @@ public class CBMain {
 				// entry.getValue());
 				// }
 
-				Cluster cl = new Cluster();
+				CBCluster cl = new CBCluster();
 				try {
 					cl.runClustering(formElements, shlClustbox);
 				} catch (IOException e1) {
