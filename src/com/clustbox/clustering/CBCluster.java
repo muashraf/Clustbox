@@ -83,10 +83,12 @@ public class CBCluster {
 	
 	private static final int bestC_THREADS = 100;
 	
-
-	// public enum Algo{
-	// SimpleKMeans, IterativeKMeans, SimpleKMedoids, IterativeKMedoids
-	// }
+	
+	 public enum Algo{
+	 SimpleKMeans, IterativeKMeans, SimpleKMedoids, IterativeKMedoids, sameSizedKMeans
+	 }
+	 
+	 private Algo runAlgo;
 	public CBCluster() {
 	}
 
@@ -114,19 +116,37 @@ public class CBCluster {
 		/* Load a dataset */
 		data = FileHandler.loadDataset(new File((String) formElements.get("dataFile")), 4, ",");
 
+		if(formElements.containsKey("simpleKMeans"))
+			runAlgo = Algo.SimpleKMeans;
+		else if(formElements.containsKey("simpleKMedoids"))
+			runAlgo = Algo.SimpleKMedoids;
+		else if(formElements.containsKey("iterativeKMeans"))
+			runAlgo = Algo.IterativeKMeans;
+		else if(formElements.containsKey("iterativeKMedoids"))
+			runAlgo = Algo.IterativeKMedoids;
+		else if(formElements.containsKey("sameSizedKMeans"))
+			runAlgo = Algo.sameSizedKMeans;
+			
 		KMIN = 2;
-		KMAX = data.size() / 4;
+		KMAX = data.size() / 10;
 		sil4K = new double[KMAX];
 		Arrays.fill(sil4K, -1);
+		
+		int k;
+		Dataset[] clusters;
+		HashMap<String, Double> score;
+		int cnt;
 		
 		CIdx = new CIndex(dm);
 		//Create swt output window
 		CreateOuputDir("Output");
-		File sFile = new File("Output/sFile.csv");
-		FileWriter fWrite = new FileWriter(sFile);
+		
+		switch(runAlgo) {
+		
+		case SimpleKMeans:
+		case SimpleKMedoids:
 		/* Run Simple KMeans or KMedoids with input K or centroids and return */
-		if (formElements.containsKey("simpleKMeans") || formElements.containsKey("simpleKMedoids")) {
-			int k;
+     		
 			Instance[] centroids = null;
 			if (formElements.containsKey("noOfClusters")) {
 				k = Integer.parseInt((String) formElements.get("noOfClusters"));
@@ -145,34 +165,32 @@ public class CBCluster {
 			}
 
 			/* Run the KMeans or KMedoids Algo */
-			if (formElements.containsKey("SimpleKMedoids")) {
+			if (runAlgo == Algo.SimpleKMedoids) {
 				km = new CBKMedoids(k, 100, dm, centroids);
 			} else {
 				km = new CBKMeans(k, 100, dm, centroids);
 			}
 
-			Dataset[] clusters = km.cluster(data);
+			clusters = km.cluster(data);
 			System.out.println("\nEvaluation Scores: \n");
-			HashMap<String, Double> score = getEvalScores(formElements, clusters);
+			score = getEvalScores(formElements, clusters);
 			for (Entry<String, Double> entry : score.entrySet()) {
 				System.out.println(entry.getKey() + " = " + entry.getValue());
 			}
 
-			int cnt = 0;
+			cnt = 0;
 			System.out.println("\nClustered Data Output Files: \n");
 			for (Dataset clust : clusters) {
 				cnt++;
 				FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
 				System.out.println("Output/Cluster-" + cnt + ".data");
 			}
-
-		}
-
-		/* Run the Iterative KMeans/KMedoids algorithms */
-		else if (formElements.containsKey("iterativeKMeans") || formElements.containsKey("iterativeKMedoids"))
-
-		{
-			int k;
+			
+			break;
+			
+		/* Run the Iterative KMeans/KMedoids algorithms */	
+		case IterativeKMeans:
+		case IterativeKMedoids: 
 			/* If K is given only run best Centroids assessment */
 			if (formElements.containsKey("noOfClusters")) {
 				k = Integer.parseInt((String) formElements.get("noOfClusters"));
@@ -185,7 +203,6 @@ public class CBCluster {
 					bestCentroids(k);
 				}
 				
-
 				System.out
 						.println("\nFinal Best Silhouette Score is: " + bestResult.bestScore + " for K = " + bestResult.bestK);
 			}
@@ -193,40 +210,46 @@ public class CBCluster {
 			/* Run clustering one last time with the best K/best centroids achieved so far */
 			System.out.println("\nExecuting clustering one last time with the best K and best initial Centroids");
 			Clusterer fkm;
-			if (formElements.containsKey("iterativeKMedoids")) {
+			if (runAlgo == Algo.IterativeKMedoids) {
 				fkm = new CBKMedoids(bestResult.bestK, 100, dm, bestResult.bestCentroids);
 			} else {
 				fkm = new CBKMeans(bestResult.bestK, 100, dm, bestResult.bestCentroids);
 			}
 
-			Dataset[] clusters = fkm.cluster(data);
+			clusters = fkm.cluster(data);
 			System.out.println("\nEvaluation Scores: \n");
-			HashMap<String, Double> score = getEvalScores(formElements, clusters);
+			score = getEvalScores(formElements, clusters);
 			for (Entry<String, Double> entry : score.entrySet()) {
 				System.out.println(entry.getKey() + " = " + entry.getValue());
 			}
 			
 			System.out.println("\nClustered Data Output Files: \n");
-			int cnt = 0;
+			cnt = 0;
 			for (Dataset clust : bestResult.bestClusters) {
 				cnt++;
 				FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
 				System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
 			}
 			
-			for(int i=2; i < sil4K.length; i++){
-				fWrite.write(String.valueOf(sil4K[i]));
-				fWrite.write("\n");
+			if(!formElements.containsKey("noOfClusters"))
+			{
+				File sFile = new File("Output/sFile.csv");
+				FileWriter fWrite = new FileWriter(sFile);
+			
+				for(int i=2; i < sil4K.length; i++){
+					fWrite.write(String.valueOf(sil4K[i]));
+					fWrite.write("\n");
+				}
+				fWrite.flush();
+				fWrite.close();
 			}
-			fWrite.flush();
-			fWrite.close();
 
-		}
+			break;
 
 		/* Run the ELKI Same-sized KMeans algorithms */
-		else if (formElements.containsKey("sameSizedKMeans")) {
+		case sameSizedKMeans:
 
-			int k = Integer.parseInt((String)formElements.get("noOfClusters"));
+			k = Integer.parseInt((String)formElements.get("noOfClusters"));
 			ListParameterization params = new ListParameterization();
 			params.addParameter(FileBasedDatabaseConnection.Parameterizer.INPUT_ID, formElements.get("dataFile"));
 			Database dbSameSize = ClassGenericsUtil.parameterizeOrAbort(StaticArrayDatabase.class, params);
@@ -253,21 +276,23 @@ public class CBCluster {
 			Clustering<MeanModel> clusteringSameSize = ssKm.run(dbSameSize);
 			
 		    // Output all clusters:
-		    int i = 0;
+		    cnt = 0;
 		    
 		    
 		    for(Cluster<MeanModel> clu : clusteringSameSize.getAllClusters()) {
 		      // K-means will name all clusters "Cluster" in lack of noise support:
-		      System.out.println("#" + i + ": " + clu.getNameAutomatic());
+		      System.out.println("#" + cnt + ": " + clu.getNameAutomatic());
 		      System.out.println("Size: " + clu.size());
 		      System.out.println();
-		      ++i;
+		      ++cnt;
 		    }
 			
 			
 			
 			double scoreSameSize = es1.evaluateClustering(dbSameSize, rel, clusteringSameSize);
 			System.out.println("\n Silhouette Coefficient = " + scoreSameSize);
+			
+			break;
 
 		}
 		
@@ -568,6 +593,11 @@ public class CBCluster {
 			}
 			Instance[] tempCentroids = initCentroids.toArray(new Instance[0]);
 			km = new CBKMeans(k, 100, dm, tempCentroids);
+			if (runAlgo == Algo.IterativeKMedoids) {
+				km = new CBKMedoids(k, 100, dm, tempCentroids);
+			} else {
+				km = new CBKMeans(k, 100, dm, tempCentroids);
+			}
 			Dataset[] tempClusters = km.cluster(data);
 			double tempScore = getAvgSilhouetteValues(tempClusters, dm);
 			//System.out.println("bestC: " + tempScore);
