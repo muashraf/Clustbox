@@ -203,8 +203,20 @@ public class CBCluster {
 					bestCentroids(k);
 				}
 				
+				File sFile = new File("Output/sFile.csv");
+				FileWriter fWrite = new FileWriter(sFile);
+			
+				for(int i=2; i < sil4K.length; i++){
+					fWrite.write(String.valueOf(sil4K[i]));
+					fWrite.write("\n");
+				}
+				fWrite.flush();
+				fWrite.close();
+				
+				
 				System.out
 						.println("\nFinal Best Silhouette Score is: " + bestResult.bestScore + " for K = " + bestResult.bestK);
+				
 			}
 			
 			/* Run clustering one last time with the best K/best centroids achieved so far */
@@ -229,19 +241,6 @@ public class CBCluster {
 				cnt++;
 				FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
 				System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
-			}
-			
-			if(!formElements.containsKey("noOfClusters"))
-			{
-				File sFile = new File("Output/sFile.csv");
-				FileWriter fWrite = new FileWriter(sFile);
-			
-				for(int i=2; i < sil4K.length; i++){
-					fWrite.write(String.valueOf(sil4K[i]));
-					fWrite.write("\n");
-				}
-				fWrite.flush();
-				fWrite.close();
 			}
 
 			break;
