@@ -2,6 +2,7 @@ package com.clustbox.clustering;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CLabel;
@@ -21,36 +22,23 @@ import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Widget;
 import org.eclipse.wb.swt.SWTResourceManager;
 
 public class CBMain {
 
 	public HashMap<String, String> formElements = new HashMap<String, String>();
 
-	private Text dataFile;
-	private Text noOfClusters;
-	private Text centroidsSource;
+	private Text dataFile, noOfClusters, centroidsSource, kMin, kMax;
 
-	private Button btnRun;
-	private Button btnCentroidsSource;
+	private Button btnRun, btnCentroidsSource, simpleKMeans, iterativeKMeans, sameSizedKMeans, simpleKMedoids,
+			iterativeKMedoids, sc, sse, scs, aic, bic, cindex, dbIndex;
 
-	private Button simpleKMeans;
-	private Button iterativeKMeans;
-	private Button sameSizedKMeans;
-	private Button simpleKMedoids;
-	private Button iterativeKMedoids;
-
-	private Button sc;
-	private Button sse;
-	private Button scs;
-	private Button aic;
-	private Button bic;
-	private Button cindex;
-	private Button dbIndex;
-
-	private Combo similarityMeasure;
+	private Combo similarityMeasure, iterativeOpt;
 
 	private Group grpAdditionalMetrices;
+
+	private Label lblKmin, lblKmax;
 
 	/**
 	 * Launch the application.
@@ -67,7 +55,7 @@ public class CBMain {
 		cb.dataFile(shlClustbox);
 		cb.selSimilarity(shlClustbox);
 		cb.clustAlgo(shlClustbox);
-		cb.setConf(shlClustbox);
+		cb.confAlgo(shlClustbox);
 		cb.evalMetrics(shlClustbox);
 		cb.exitWindow(shlClustbox);
 		cb.runCB(shlClustbox);
@@ -91,142 +79,14 @@ public class CBMain {
 		}
 	}
 
-	private void selSimilarity(Shell shlClustbox) {
-		String[] similarityItems = { "     ---- Select Similarity Measure ----     ", "EuclideanDistance",
-				"CosineSimilarity", "JaccardIndexSimilarity", "ManhattanDistance", "MinkowskiDistance",
-				"NormalizedEuclideanDistance", "PearsonCorrelationCoefficient" };
+	private void confAlgo(Shell shlClustbox) {
+		Group grpConfigurations = new Group(shlClustbox, SWT.NONE);
+		grpConfigurations.setText("Configurations");
+		grpConfigurations.setBounds(10, 300, 500, 150);
+		ModifyListener listener = runBtnStatus();
 
-		similarityMeasure = new Combo(shlClustbox, SWT.DROP_DOWN | SWT.READ_ONLY);
-		similarityMeasure.setItems(similarityItems);
-		similarityMeasure.select(0);
-		similarityMeasure.setBounds(530, 90, 240, 25);
-	}
-
-	private void clustAlgo(Shell shlClustbox) {
-		Group grpClustAlgo = new Group(shlClustbox, SWT.NONE);
-		grpClustAlgo.setText("Clustering Algorithms");
-		grpClustAlgo.setBounds(10, 150, 500, 180);
-
-		simpleKMeans = new Button(grpClustAlgo, SWT.RADIO);
-		simpleKMeans.setBounds(20, 40, 140, 16);
-		simpleKMeans.setText("Simple K-means");
-		selAlgo(simpleKMeans);
-
-		iterativeKMeans = new Button(grpClustAlgo, SWT.RADIO);
-		iterativeKMeans.setBounds(20, 80, 140, 16);
-		iterativeKMeans.setText("Iterative K-means");
-		selAlgo(iterativeKMeans);
-
-		sameSizedKMeans = new Button(grpClustAlgo, SWT.RADIO);
-		sameSizedKMeans.setBounds(20, 120, 140, 16);
-		sameSizedKMeans.setText("Same-sized K-means");
-		selAlgo(sameSizedKMeans);
-
-		simpleKMedoids = new Button(grpClustAlgo, SWT.RADIO);
-		simpleKMedoids.setBounds(250, 40, 140, 16);
-		simpleKMedoids.setText("Simple K-medoids");
-		selAlgo(simpleKMedoids);
-
-		iterativeKMedoids = new Button(grpClustAlgo, SWT.RADIO);
-		iterativeKMedoids.setBounds(250, 80, 140, 16);
-		iterativeKMedoids.setText("Iterative K-medoids");
-		selAlgo(iterativeKMedoids);
-
-	}
-
-	private void selAlgo(Button radioBtn) {
-		radioBtn.addSelectionListener(new SelectionAdapter() {
-			@Override
-			public void widgetSelected(final SelectionEvent e) {
-				Button button = (Button) e.widget;
-				if (button.equals(simpleKMeans)) {
-					noOfClusters.setText("");
-					noOfClusters.setEnabled(true);
-					centroidsSource.setText("");
-					centroidsSource.setEnabled(true);
-					btnCentroidsSource.setEnabled(true);
-					similarityMeasure.setEnabled(true);
-					int cnt = 0;
-					for (Control child : grpAdditionalMetrices.getChildren()) {
-						cnt++;
-						if (cnt > 1) {
-							child.setEnabled(true);
-						}
-					}
-				} else if (button.equals(iterativeKMeans)) {
-					noOfClusters.setText("");
-					noOfClusters.setEnabled(true);
-					centroidsSource.setText("");
-					centroidsSource.setEnabled(false);
-					btnCentroidsSource.setEnabled(false);
-					similarityMeasure.setEnabled(true);
-					int cnt = 0;
-					for (Control child : grpAdditionalMetrices.getChildren()) {
-						cnt++;
-						if (cnt > 1) {
-							child.setEnabled(true);
-						}
-					}
-				} else if (button.equals(sameSizedKMeans)) {
-					noOfClusters.setText("");
-					noOfClusters.setEnabled(true);
-					centroidsSource.setText("");
-					centroidsSource.setEnabled(false);
-					btnCentroidsSource.setEnabled(false);
-					similarityMeasure.setEnabled(false);
-					for (Control child : grpAdditionalMetrices.getChildren()) {
-						child.setEnabled(false);
-					}
-
-				} else if (button.equals(simpleKMedoids)) {
-					noOfClusters.setText("");
-					noOfClusters.setEnabled(true);
-					centroidsSource.setText("");
-					centroidsSource.setEnabled(true);
-					btnCentroidsSource.setEnabled(true);
-					similarityMeasure.setEnabled(true);
-					int cnt = 0;
-					for (Control child : grpAdditionalMetrices.getChildren()) {
-						cnt++;
-						if (cnt > 1) {
-							child.setEnabled(true);
-						}
-					}
-				} else if (button.equals(iterativeKMedoids)) {
-					noOfClusters.setText("");
-					noOfClusters.setEnabled(true);
-					centroidsSource.setText("");
-					centroidsSource.setEnabled(false);
-					btnCentroidsSource.setEnabled(false);
-					similarityMeasure.setEnabled(true);
-					int cnt = 0;
-					for (Control child : grpAdditionalMetrices.getChildren()) {
-						cnt++;
-						if (cnt > 1) {
-							child.setEnabled(true);
-						}
-					}
-				}
-				if ((button.equals(simpleKMeans) || button.equals(simpleKMedoids)) && dataFile.getText().length() > 0
-						&& (noOfClusters.getText().length() > 0 || centroidsSource.getText().length() > 0)) {
-					btnRun.setEnabled(true);
-				} else if ((button.equals(iterativeKMeans) || button.equals(iterativeKMedoids))
-						&& dataFile.getText().length() > 0) {
-					btnRun.setEnabled(true);
-				} else if (button.equals(sameSizedKMeans) && dataFile.getText().length() > 0
-						&& noOfClusters.getText().length() > 0) {
-					btnRun.setEnabled(true);
-				} else {
-					btnRun.setEnabled(false);
-				}
-
-			}
-		});
-	}
-
-	private void setConf(Shell shlClustbox) {
-		noOfClusters = new Text(shlClustbox, SWT.BORDER);
-		noOfClusters.setBounds(20, 400, 230, 25);
+		noOfClusters = new Text(grpConfigurations, SWT.BORDER);
+		noOfClusters.setBounds(10, 100, 230, 25);
 		noOfClusters.setEnabled(false);
 		noOfClusters.addModifyListener(new ModifyListener() {
 			public void modifyText(ModifyEvent e) {
@@ -243,12 +103,11 @@ public class CBMain {
 				}
 			}
 		});
-		ModifyListener listener = runBtnStatus();
 		validateClusterText(noOfClusters);
 		noOfClusters.addModifyListener(listener);
 
-		centroidsSource = new Text(shlClustbox, SWT.BORDER);
-		centroidsSource.setBounds(270, 400, 210, 25);
+		centroidsSource = new Text(grpConfigurations, SWT.BORDER);
+		centroidsSource.setBounds(250, 100, 210, 25);
 		centroidsSource.setEnabled(false);
 		centroidsSource.addModifyListener(new ModifyListener() {
 			public void modifyText(ModifyEvent e) {
@@ -266,19 +125,252 @@ public class CBMain {
 		});
 		centroidsSource.addModifyListener(listener);
 
-		btnCentroidsSource = new Button(shlClustbox, SWT.NONE);
-		btnCentroidsSource.setBounds(480, 400, 25, 25);
+		btnCentroidsSource = new Button(grpConfigurations, SWT.NONE);
+		btnCentroidsSource.setBounds(465, 100, 25, 25);
 		btnCentroidsSource.setText("....");
 		btnCentroidsSource.setEnabled(false);
 		chooseFile(shlClustbox, btnCentroidsSource, centroidsSource);
 
-		Label lblNoOfClusters = new Label(shlClustbox, SWT.NONE);
-		lblNoOfClusters.setBounds(20, 380, 120, 15);
+		Label lblNoOfClusters = new Label(grpConfigurations, SWT.NONE);
+		lblNoOfClusters.setBounds(10, 85, 120, 15);
 		lblNoOfClusters.setText("Number Of Clusters:");
 
-		Label lblCentroidsSource = new Label(shlClustbox, SWT.NONE);
-		lblCentroidsSource.setBounds(270, 380, 120, 15);
+		Label lblCentroidsSource = new Label(grpConfigurations, SWT.NONE);
+		lblCentroidsSource.setBounds(250, 85, 120, 15);
 		lblCentroidsSource.setText("Centroids Source:");
+
+		iterativeOpt = new Combo(grpConfigurations, SWT.DROP_DOWN | SWT.READ_ONLY);
+		String[] iterativeItems = { "Best centroid evaluation", "Best centroid and K evaluation" };
+
+		iterativeOpt.setItems(iterativeItems);
+		iterativeOpt.select(0);
+		iterativeOpt.setBounds(10, 40, 200, 25);
+		iterativeOpt.setEnabled(false);
+		iterativeOpt.addSelectionListener(new SelectionAdapter() {
+			public void widgetSelected(SelectionEvent e) {
+				if (iterativeOpt.getSelectionIndex() != 0) {
+					lblKmin.setVisible(true);
+					kMin.setVisible(true);
+					kMin.setText("");
+					lblKmax.setVisible(true);
+					kMax.setVisible(true);
+					kMax.setText("");
+					noOfClusters.setText("");
+					noOfClusters.setEnabled(false);
+				} else {
+					lblKmin.setVisible(false);
+					kMin.setVisible(false);
+					kMin.setText("");
+					lblKmax.setVisible(false);
+					kMax.setVisible(false);
+					kMax.setText("");
+					noOfClusters.setText("");
+					noOfClusters.setEnabled(true);
+				}
+			}
+		});
+		iterativeOpt.addModifyListener(listener);
+
+		lblKmin = new Label(grpConfigurations, SWT.NONE);
+		lblKmin.setBounds(250, 40, 40, 15);
+		lblKmin.setText("K-MIN:");
+		lblKmin.setVisible(false);
+
+		kMin = new Text(grpConfigurations, SWT.BORDER);
+		kMin.setText("");
+		kMin.setBounds(300, 40, 40, 25);
+		kMin.setVisible(false);
+		validateClusterText(kMin);
+
+		lblKmax = new Label(grpConfigurations, SWT.NONE);
+		lblKmax.setBounds(370, 40, 40, 15);
+		lblKmax.setText("K-MAX:");
+		lblKmax.setVisible(false);
+
+		kMax = new Text(grpConfigurations, SWT.BORDER);
+		kMax.setText("");
+		kMax.setBounds(420, 40, 40, 25);
+		kMax.setVisible(false);
+		validateClusterText(kMax);
+
+	}
+
+	private void selSimilarity(Shell shlClustbox) {
+		String[] similarityItems = { "     ---- Select Similarity Measure ----     ", "EuclideanDistance",
+				"CosineSimilarity", "JaccardIndexSimilarity", "ManhattanDistance", "MinkowskiDistance",
+				"NormalizedEuclideanDistance", "PearsonCorrelationCoefficient" };
+
+		similarityMeasure = new Combo(shlClustbox, SWT.DROP_DOWN | SWT.READ_ONLY);
+		similarityMeasure.setItems(similarityItems);
+		similarityMeasure.select(0);
+		similarityMeasure.setBounds(530, 90, 240, 25);
+	}
+
+	private void clustAlgo(Shell shlClustbox) {
+		Group grpClustAlgo = new Group(shlClustbox, SWT.NONE);
+		grpClustAlgo.setText("Clustering Algorithms");
+		grpClustAlgo.setBounds(10, 150, 500, 120);
+
+		simpleKMeans = new Button(grpClustAlgo, SWT.RADIO);
+		simpleKMeans.setBounds(10, 35, 120, 16);
+		simpleKMeans.setText("Simple K-means");
+		selAlgo(simpleKMeans);
+
+		iterativeKMeans = new Button(grpClustAlgo, SWT.RADIO);
+		iterativeKMeans.setBounds(10, 70, 120, 16);
+		iterativeKMeans.setText("Iterative K-means");
+		selAlgo(iterativeKMeans);
+
+		sameSizedKMeans = new Button(grpClustAlgo, SWT.RADIO);
+		sameSizedKMeans.setBounds(360, 35, 120, 16);
+		sameSizedKMeans.setText("Same-sized K-means");
+		selAlgo(sameSizedKMeans);
+
+		simpleKMedoids = new Button(grpClustAlgo, SWT.RADIO);
+		simpleKMedoids.setBounds(180, 35, 120, 16);
+		simpleKMedoids.setText("Simple K-medoids");
+		selAlgo(simpleKMedoids);
+
+		iterativeKMedoids = new Button(grpClustAlgo, SWT.RADIO);
+		iterativeKMedoids.setBounds(180, 70, 120, 16);
+		iterativeKMedoids.setText("Iterative K-medoids");
+		selAlgo(iterativeKMedoids);
+
+	}
+
+	private void selAlgo(Button radioBtn) {
+		radioBtn.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(final SelectionEvent e) {
+				Button button = (Button) e.widget;
+				if (button.equals(simpleKMeans)) {
+					noOfClusters.setText("");
+					noOfClusters.setEnabled(true);
+					centroidsSource.setText("");
+					centroidsSource.setEnabled(true);
+					btnCentroidsSource.setEnabled(true);
+					similarityMeasure.setEnabled(true);
+					iterativeOpt.setEnabled(false);
+					iterativeOpt.select(0);
+					lblKmin.setVisible(false);
+					kMin.setText("");
+					kMin.setVisible(false);
+					lblKmax.setVisible(false);
+					kMax.setText("");
+					kMax.setVisible(false);
+					int cnt = 0;
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						cnt++;
+						if (cnt > 1) {
+							child.setEnabled(true);
+						}
+					}
+				} else if (button.equals(iterativeKMeans)) {
+					noOfClusters.setText("");
+					noOfClusters.setEnabled(true);
+					centroidsSource.setText("");
+					centroidsSource.setEnabled(false);
+					btnCentroidsSource.setEnabled(false);
+					similarityMeasure.setEnabled(true);
+					iterativeOpt.setEnabled(true);
+					iterativeOpt.select(0);
+					lblKmin.setVisible(false);
+					kMin.setText("");
+					kMin.setVisible(false);
+					lblKmax.setVisible(false);
+					kMax.setText("");
+					kMax.setVisible(false);
+					int cnt = 0;
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						cnt++;
+						if (cnt > 1) {
+							child.setEnabled(true);
+						}
+					}
+				} else if (button.equals(sameSizedKMeans)) {
+					noOfClusters.setText("");
+					noOfClusters.setEnabled(true);
+					centroidsSource.setText("");
+					centroidsSource.setEnabled(false);
+					btnCentroidsSource.setEnabled(false);
+					similarityMeasure.setEnabled(false);
+					iterativeOpt.setEnabled(false);
+					iterativeOpt.select(0);
+					lblKmin.setVisible(false);
+					kMin.setText("");
+					kMin.setVisible(false);
+					lblKmax.setVisible(false);
+					kMax.setText("");
+					kMax.setVisible(false);
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						child.setEnabled(false);
+					}
+
+				} else if (button.equals(simpleKMedoids)) {
+					noOfClusters.setText("");
+					noOfClusters.setEnabled(true);
+					centroidsSource.setText("");
+					centroidsSource.setEnabled(true);
+					btnCentroidsSource.setEnabled(true);
+					similarityMeasure.setEnabled(true);
+					iterativeOpt.setEnabled(false);
+					iterativeOpt.select(0);
+					lblKmin.setVisible(false);
+					kMin.setText("");
+					kMin.setVisible(false);
+					lblKmax.setVisible(false);
+					kMax.setText("");
+					kMax.setVisible(false);
+					int cnt = 0;
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						cnt++;
+						if (cnt > 1) {
+							child.setEnabled(true);
+						}
+					}
+				} else if (button.equals(iterativeKMedoids)) {
+					noOfClusters.setText("");
+					noOfClusters.setEnabled(true);
+					centroidsSource.setText("");
+					centroidsSource.setEnabled(false);
+					btnCentroidsSource.setEnabled(false);
+					similarityMeasure.setEnabled(true);
+					iterativeOpt.setEnabled(true);
+					iterativeOpt.select(0);
+					lblKmin.setVisible(false);
+					kMin.setText("");
+					kMin.setVisible(false);
+					lblKmax.setVisible(false);
+					kMax.setText("");
+					kMax.setVisible(false);
+					int cnt = 0;
+					for (Control child : grpAdditionalMetrices.getChildren()) {
+						cnt++;
+						if (cnt > 1) {
+							child.setEnabled(true);
+						}
+					}
+				}
+				if ((button.equals(simpleKMeans) || button.equals(simpleKMedoids)) && dataFile.getText().length() > 0
+						&& (noOfClusters.getText().length() > 0 || centroidsSource.getText().length() > 0)) {
+					btnRun.setEnabled(true);
+				} else if (button.equals(sameSizedKMeans) && dataFile.getText().length() > 0
+						&& noOfClusters.getText().length() > 0) {
+					btnRun.setEnabled(true);
+				} else if ((button.equals(iterativeKMeans) || button.equals(iterativeKMedoids))
+						&& dataFile.getText().length() > 0 && iterativeOpt.getSelectionIndex() == 0
+						&& noOfClusters.getText().length() > 0) {
+					btnRun.setEnabled(true);
+				} else if ((button.equals(iterativeKMeans) || button.equals(iterativeKMedoids))
+						&& dataFile.getText().length() > 0 && iterativeOpt.getSelectionIndex() == 1) {
+					btnRun.setEnabled(true);
+				} else {
+					btnRun.setEnabled(false);
+				}
+
+			}
+		});
+
 	}
 
 	private void validateClusterText(Text textField) {
@@ -359,6 +451,14 @@ public class CBMain {
 					formElements.put("noOfClusters", noOfClusters.getText());
 				}
 
+				if (kMin.getVisible() && kMin.getText().length() > 0) {
+					formElements.put("kMin", kMin.getText());
+				}
+
+				if (kMax.getVisible() && kMax.getText().length() > 0) {
+					formElements.put("kMax", kMax.getText());
+				}
+
 				if (centroidsSource.getEnabled() && centroidsSource.getText().length() > 0) {
 					formElements.put("centroidsSource", centroidsSource.getText());
 				}
@@ -414,8 +514,10 @@ public class CBMain {
 				} else
 					formElements.put("similarityMeasure", similarityMeasure.getText());
 
-				// for (Map.Entry<String, String> entry :
-				// formElements.entrySet()) {
+				if (iterativeOpt.getEnabled())
+					formElements.put("iterativeOpt", iterativeOpt.getText());
+
+				// for (Entry<String, String> entry : formElements.entrySet()) {
 				// System.out.println("Keys: " + entry.getKey() + " Values: " +
 				// entry.getValue());
 				// }
@@ -461,6 +563,14 @@ public class CBMain {
 				cindex.setSelection(false);
 				dbIndex.setSelection(false);
 				similarityMeasure.select(0);
+				iterativeOpt.setEnabled(false);
+				iterativeOpt.select(0);
+				lblKmin.setVisible(false);
+				kMin.setText("");
+				kMin.setVisible(false);
+				lblKmax.setVisible(false);
+				kMax.setText("");
+				kMax.setVisible(false);
 			}
 		});
 	}
@@ -480,7 +590,7 @@ public class CBMain {
 	private void dataFile(Shell shlClustbox) {
 		Group grpSourceFile = new Group(shlClustbox, SWT.NONE);
 		grpSourceFile.setText("Source File");
-		grpSourceFile.setBounds(10, 60, 500, 69);
+		grpSourceFile.setBounds(10, 60, 500, 70);
 
 		dataFile = new Text(grpSourceFile, SWT.BORDER);
 		dataFile.setBounds(100, 30, 270, 25);
@@ -503,11 +613,15 @@ public class CBMain {
 				if ((simpleKMeans.getSelection() || simpleKMedoids.getSelection()) && dataFile.getText().length() > 0
 						&& (noOfClusters.getText().length() > 0 || centroidsSource.getText().length() > 0)) {
 					btnRun.setEnabled(true);
-				} else if ((iterativeKMeans.getSelection() || iterativeKMedoids.getSelection())
-						&& dataFile.getText().length() > 0) {
-					btnRun.setEnabled(true);
 				} else if (sameSizedKMeans.getSelection()
 						&& (dataFile.getText().length() > 0 && noOfClusters.getText().length() > 0)) {
+					btnRun.setEnabled(true);
+				} else if ((iterativeKMeans.getSelection() || iterativeKMedoids.getSelection())
+						&& dataFile.getText().length() > 0 && iterativeOpt.getSelectionIndex() == 0
+						&& noOfClusters.getText().length() > 0) {
+					btnRun.setEnabled(true);
+				} else if ((iterativeKMeans.getSelection() || iterativeKMedoids.getSelection())
+						&& dataFile.getText().length() > 0 && iterativeOpt.getSelectionIndex() == 1) {
 					btnRun.setEnabled(true);
 				} else {
 					btnRun.setEnabled(false);
