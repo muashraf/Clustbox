@@ -132,8 +132,16 @@ public class CBCluster {
 		else if (formElements.containsKey("sameSizedKMeans"))
 			runAlgo = Algo.sameSizedKMeans;
 
-		KMIN = 2;
-		KMAX = data.size() / 10;
+		if (formElements.containsKey("kMin"))
+			KMIN = Integer.parseInt((String) formElements.get("kMin"));
+		else
+			KMIN = 2;
+		
+		if (formElements.containsKey("kMax"))
+			KMAX = Integer.parseInt((String) formElements.get("kMax"));
+		else
+			KMAX = data.size() / 10;;
+
 		sil4K = new double[KMAX];
 		Arrays.fill(sil4K, -1);
 
@@ -252,6 +260,17 @@ public class CBCluster {
 				FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
 				System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
 			}
+			
+			/* Plot a curve for the silheouette's against k-values for best K evaluation */
+			if (!formElements.containsKey("noOfClusters")) {
+				Chart chart = new Chart(shlClustbox, SWT.NONE);
+				ISeriesSet seriesSet = chart.getSeriesSet();
+				ISeries series = seriesSet.createSeries(SeriesType.LINE, "line series");
+			
+				series.setYSeries(Arrays.copyOfRange(sil4K, 2, KMAX));
+				IAxisSet axisSet = chart.getAxisSet();
+				axisSet.adjustRange();
+			}
 
 			break;
 
@@ -302,13 +321,6 @@ public class CBCluster {
 
 		}
 
-		Chart chart = new Chart(shlClustbox, SWT.NONE);
-		double[] ySeries = { 0.3, 1.4, 1.3, 1.9, 2.1 };
-		ISeriesSet seriesSet = chart.getSeriesSet();
-		ISeries series = seriesSet.createSeries(SeriesType.LINE, "line series");
-		series.setYSeries(ySeries);
-		IAxisSet axisSet = chart.getAxisSet();
-		axisSet.adjustRange();
 
 		/* Close the output window */
 		while (!shlClustbox.isDisposed()) {
