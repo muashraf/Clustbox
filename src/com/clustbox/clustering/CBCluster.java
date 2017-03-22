@@ -234,7 +234,7 @@ public class CBCluster {
 				File sFile = new File("Output/sFile.csv");
 				FileWriter fWrite = new FileWriter(sFile);
 
-				for (int i = 2; i < sil4K.length; i++) {
+				for (int i = KMIN; i < KMAX; i++) {
 					fWrite.write(String.valueOf(sil4K[i]));
 					fWrite.write("\n");
 				}
