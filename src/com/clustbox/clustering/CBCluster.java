@@ -214,9 +214,18 @@ public class CBCluster {
 				bestCentroids(k);
 
 			} else {
-
+				int trend_cnt = 0;
 				for (k = KMIN; k < KMAX; k++) {
 					bestCentroids(k);
+					/* Monitor the trend of silhouette values against k.  Break the  
+					 * loop when no change being observed in the bestScore (since last 4 runs) */ 
+					if(k > KMIN && bestResult.bestScore > sil4K[k]) {
+						trend_cnt++;
+					}
+					if(trend_cnt >= 4) {
+						KMAX = k;
+						break;
+					}
 				}
 
 				File sFile = new File("Output/sFile.csv");
