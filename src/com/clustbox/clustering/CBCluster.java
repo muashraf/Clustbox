@@ -222,6 +222,9 @@ public class CBCluster {
 					if(k > KMIN && bestResult.bestScore > sil4K[k]) {
 						trend_cnt++;
 					}
+					else {
+						trend_cnt = 0;
+					}
 					if(trend_cnt >= 4) {
 						KMAX = k;
 						break;
@@ -276,7 +279,7 @@ public class CBCluster {
 				ISeriesSet seriesSet = chart.getSeriesSet();
 				ISeries series = seriesSet.createSeries(SeriesType.LINE, "line series");
 			
-				series.setYSeries(Arrays.copyOfRange(sil4K, 2, KMAX));
+				series.setYSeries(Arrays.copyOfRange(sil4K, KMIN, KMAX));
 				IAxisSet axisSet = chart.getAxisSet();
 				axisSet.adjustRange();
 			}
