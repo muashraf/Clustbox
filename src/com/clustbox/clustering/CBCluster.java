@@ -17,6 +17,7 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
+import org.rosuda.JRI.Rengine;
 import org.swtchart.Chart;
 import org.swtchart.IAxisSet;
 import org.swtchart.ISeries;
@@ -132,8 +133,16 @@ public class CBCluster {
 		else if (formElements.containsKey("sameSizedKMeans"))
 			runAlgo = Algo.sameSizedKMeans;
 
-		KMIN = 2;
-		KMAX = data.size() / 10;
+		if (formElements.containsKey("kMin"))
+			KMIN = Integer.parseInt((String) formElements.get("kMin"));
+		else
+			KMIN = 2;
+		
+		if (formElements.containsKey("kMax"))
+			KMAX = Integer.parseInt((String) formElements.get("kMax"));
+		else
+			KMAX = data.size() / 10;;
+
 		sil4K = new double[KMAX];
 		Arrays.fill(sil4K, -1);
 
@@ -206,15 +215,29 @@ public class CBCluster {
 				bestCentroids(k);
 
 			} else {
-
+				int trend_cnt = 0;
 				for (k = KMIN; k < KMAX; k++) {
 					bestCentroids(k);
+					/* Monitor the trend of silhouette values against k.  Break the  
+					 * loop when no change being observed in the bestScore (since last 4 runs) */ 
+					if(k > KMIN && bestResult.bestScore > sil4K[k]) {
+						trend_cnt++;
+					}
+					else {
+						trend_cnt = 0;
+					}
+					if(trend_cnt >= 4) {
+						KMAX = k;
+						break;
+					}
 				}
+				
+				double[] sArray = Arrays.copyOfRange(sil4K, KMIN, KMAX);
 
 				File sFile = new File("Output/sFile.csv");
 				FileWriter fWrite = new FileWriter(sFile);
 
-				for (int i = 2; i < sil4K.length; i++) {
+				for (int i = KMIN; i < KMAX; i++) {
 					fWrite.write(String.valueOf(sil4K[i]));
 					fWrite.write("\n");
 				}
@@ -224,8 +247,30 @@ public class CBCluster {
 				System.out.println(
 						"\nFinal Best Silhouette Score is: " + bestResult.bestScore + " for K = " + bestResult.bestK);
 
+				Rengine engine = new Rengine(new String[] { "--no-save" }, false, null);
+				engine.assign("values", sArray);
+				engine.eval("temp <- shapiro.test(values)");
+				engine.eval("meanVal=mean(values)");
+				engine.eval("sdVal=sd(values)");
+				engine.eval("maxVal=max(values)");
+				int length = sArray.length;
+			    double mean = engine.eval("meanVal").asDouble();
+			    double max = engine.eval("maxVal").asDouble();
+			    double sd = engine.eval("sdVal").asDouble();
+			    double denom = sd/Math.sqrt(length);
+			    double t = (mean-max)/denom;
+			    int length1 = length - 1;
+			    double x = -(Math.abs(t));
+			    engine.eval("x=" + x);
+			    engine.eval("length1="+length1);
+			    engine.eval("q=pt(x,length1)");
+			    double q = 2 * engine.eval("q").asDouble();
+			    double percent = (1-q)*100;
+			    System.out.println("\nThe best K result has been obtained with a confidence of " + percent + " %");
+			    System.out.println("The p-value for the test is "+engine.eval("temp$p.value").asDouble());
 			}
 
+			
 			/*
 			 * Run clustering one last time with the best K/best centroids
 			 * achieved so far
@@ -251,6 +296,17 @@ public class CBCluster {
 				cnt++;
 				FileHandler.exportDataset(clust, new File("Output/Cluster-" + cnt + ".data"), false, ",");
 				System.out.println("Dumped cluster data to Output/Cluster-" + cnt + ".data");
+			}
+			
+			/* Plot a curve for the silheouette's against k-values for best K evaluation */
+			if (!formElements.containsKey("noOfClusters")) {
+				Chart chart = new Chart(shlClustbox, SWT.NONE);
+				ISeriesSet seriesSet = chart.getSeriesSet();
+				ISeries series = seriesSet.createSeries(SeriesType.LINE, "Silheoutte Curve");
+			
+				series.setYSeries(Arrays.copyOfRange(sil4K, KMIN, KMAX));
+				IAxisSet axisSet = chart.getAxisSet();
+				axisSet.adjustRange();
 			}
 
 			break;
@@ -302,13 +358,6 @@ public class CBCluster {
 
 		}
 
-		Chart chart = new Chart(shlClustbox, SWT.NONE);
-		double[] ySeries = { 0.3, 1.4, 1.3, 1.9, 2.1 };
-		ISeriesSet seriesSet = chart.getSeriesSet();
-		ISeries series = seriesSet.createSeries(SeriesType.LINE, "line series");
-		series.setYSeries(ySeries);
-		IAxisSet axisSet = chart.getAxisSet();
-		axisSet.adjustRange();
 
 		/* Close the output window */
 		while (!shlClustbox.isDisposed()) {
