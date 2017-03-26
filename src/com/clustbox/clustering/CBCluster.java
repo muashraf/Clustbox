@@ -303,6 +303,8 @@ public class CBCluster {
 				Chart chart = new Chart(shlClustbox, SWT.NONE);
 				ISeriesSet seriesSet = chart.getSeriesSet();
 				ISeries series = seriesSet.createSeries(SeriesType.LINE, "Silheoutte Curve");
+
+				
 			
 				series.setYSeries(Arrays.copyOfRange(sil4K, KMIN, KMAX));
 				IAxisSet axisSet = chart.getAxisSet();
