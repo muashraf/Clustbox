@@ -82,6 +82,7 @@ public class CBCluster {
 	public Shell shlClustbox;
 	public OutputStream out;
 
+
 	static int KMIN;
 	static int KMAX;
 
@@ -108,6 +109,7 @@ public class CBCluster {
 		shlClustbox.setLayout(new FillLayout());
 		final Text text = new Text(shlClustbox, SWT.READ_ONLY | SWT.MULTI | SWT.V_SCROLL | SWT.WRAP);
 		shlClustbox.open();
+		
 		out = new OutputStream() {
 			@Override
 			public void write(int b) throws IOException {
@@ -216,7 +218,7 @@ public class CBCluster {
 
 			} else {
 				int trend_cnt = 0;
-				for (k = KMIN; k < KMAX; k++) {
+				for (k = KMIN; k <= KMAX; k++) {
 					bestCentroids(k);
 					/* Monitor the trend of silhouette values against k.  Break the  
 					 * loop when no change being observed in the bestScore (since last 4 runs) */ 
@@ -232,12 +234,12 @@ public class CBCluster {
 					}
 				}
 				
-				double[] sArray = Arrays.copyOfRange(sil4K, KMIN, KMAX);
+				double[] sArray = Arrays.copyOfRange(sil4K, KMIN, KMAX+1);
 
 				File sFile = new File("Output/sFile.csv");
 				FileWriter fWrite = new FileWriter(sFile);
 
-				for (int i = KMIN; i < KMAX; i++) {
+				for (int i = KMIN; i <= KMAX; i++) {
 					fWrite.write(String.valueOf(sil4K[i]));
 					fWrite.write("\n");
 				}
@@ -304,9 +306,15 @@ public class CBCluster {
 				ISeriesSet seriesSet = chart.getSeriesSet();
 				ISeries series = seriesSet.createSeries(SeriesType.LINE, "Silheoutte Curve");
 
+				double[] xAxis = new double[KMAX-KMIN + 1];
 				
+				xAxis[0] = KMIN;
+				for(int i = 1; i < xAxis.length; i++)
+					xAxis[i] = xAxis[i-1] + 1; 
 			
-				series.setYSeries(Arrays.copyOfRange(sil4K, KMIN, KMAX));
+				series.setYSeries(Arrays.copyOfRange(sil4K, KMIN, KMAX+1));
+				series.setXSeries(xAxis);
+				
 				IAxisSet axisSet = chart.getAxisSet();
 				axisSet.adjustRange();
 			}
