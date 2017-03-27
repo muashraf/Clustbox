@@ -145,7 +145,7 @@ public class CBCluster {
 		else
 			KMAX = data.size() / 10;;
 
-		sil4K = new double[KMAX];
+		sil4K = new double[KMAX+1];
 		Arrays.fill(sil4K, -1);
 
 		int k;
