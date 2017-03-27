@@ -20,6 +20,7 @@ import org.eclipse.swt.widgets.Text;
 import org.rosuda.JRI.Rengine;
 import org.swtchart.Chart;
 import org.swtchart.IAxisSet;
+import org.swtchart.ILegend;
 import org.swtchart.ISeries;
 import org.swtchart.ISeries.SeriesType;
 import org.swtchart.ISeriesSet;
@@ -303,9 +304,10 @@ public class CBCluster {
 			/* Plot a curve for the silheouette's against k-values for best K evaluation */
 			if (!formElements.containsKey("noOfClusters")) {
 				Chart chart = new Chart(shlClustbox, SWT.NONE);
+				ILegend legend = chart.getLegend();
 				ISeriesSet seriesSet = chart.getSeriesSet();
-				ISeries series = seriesSet.createSeries(SeriesType.LINE, "Silheoutte Curve");
-
+				ISeries series = seriesSet.createSeries(SeriesType.LINE, "Silhouette Curve");
+				
 				double[] xAxis = new double[KMAX-KMIN + 1];
 				
 				xAxis[0] = KMIN;
@@ -314,7 +316,7 @@ public class CBCluster {
 			
 				series.setYSeries(Arrays.copyOfRange(sil4K, KMIN, KMAX+1));
 				series.setXSeries(xAxis);
-				
+				legend.setPosition(SWT.TOP);
 				IAxisSet axisSet = chart.getAxisSet();
 				axisSet.adjustRange();
 			}

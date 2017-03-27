@@ -11,8 +11,11 @@ import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -105,6 +108,7 @@ public class CBMain {
 		});
 		validateClusterText(noOfClusters);
 		noOfClusters.addModifyListener(listener);
+		noOfClusters.setToolTipText("Number of clusters to produce.");
 
 		centroidsSource = new Text(grpConfigurations, SWT.BORDER);
 		centroidsSource.setBounds(250, 100, 210, 25);
@@ -124,6 +128,7 @@ public class CBMain {
 			}
 		});
 		centroidsSource.addModifyListener(listener);
+		centroidsSource.setToolTipText("Browse source file for centroids instances.");
 
 		btnCentroidsSource = new Button(grpConfigurations, SWT.NONE);
 		btnCentroidsSource.setBounds(465, 100, 25, 25);
@@ -170,6 +175,12 @@ public class CBMain {
 			}
 		});
 		iterativeOpt.addModifyListener(listener);
+		iterativeOpt.setToolTipText("Evaluation Criterion:-\nBest Centroid Evaluation:-\nFor this variation "
+				+ "best initial starting centroids are evaluated K\n\nBest Centroid and K Evaluation:-\nFor "
+				+ "this variation best K is evaluated along with best centroids\n\nThe algorithm runs "
+				+ "iteratively for [KMIN......KMAX] If KMIN and KMAX are not given following default values "
+				+ "will be selected KMIN=2 KMAX=Size of data/10\n\nNote:-\nWhen no change in the best score "
+				+ "is observe for the recent 5 runs of algorithm with increasing K, the iteration stops.");
 
 		lblKmin = new Label(grpConfigurations, SWT.NONE);
 		lblKmin.setBounds(250, 40, 40, 15);
@@ -180,6 +191,7 @@ public class CBMain {
 		kMin.setText("");
 		kMin.setBounds(300, 40, 40, 25);
 		kMin.setVisible(false);
+		kMin.setToolTipText("Minimum number of times clustering should run.");
 		validateClusterText(kMin);
 
 		lblKmax = new Label(grpConfigurations, SWT.NONE);
@@ -191,6 +203,7 @@ public class CBMain {
 		kMax.setText("");
 		kMax.setBounds(420, 40, 40, 25);
 		kMax.setVisible(false);
+		kMax.setToolTipText("Maximum number of times clustering should run.");
 		validateClusterText(kMax);
 
 	}
@@ -204,6 +217,19 @@ public class CBMain {
 		similarityMeasure.setItems(similarityItems);
 		similarityMeasure.select(0);
 		similarityMeasure.setBounds(530, 90, 240, 25);
+		similarityMeasure.setToolTipText("Euclidean Distance:-\nThe Euclidean distance or Euclidean metric "
+				+ "is the 'ordinary' distance between two points in Euclidean space. Formula:- dist((x, y), "
+				+ "(a, b)) = v(x - a)² + (y - b)².\n\nCosine Similarity:-\nCosine similarity is a measure of "
+				+ "similarity between two non-zero vectors of an inner product space. Formula:- cos(d1, d2) = "
+				+ "(d1 · d2) / ||d1|| ||d2||.\n\nJaccard Index Similarity:-\nThe Jaccard coefficient measures "
+				+ "similarity between finite sample sets, and is defined as the size of the intersection divided "
+				+ "by the size of the union of the sample sets.\n\nManhattan Distance:-\nThe distance between two "
+				+ "points in a grid based on a strictly horizontal and/or vertical path.\n\nMinkowski Distance:-\n"
+				+ "The Minkowski distance is a metric in a normed vector space which can be considered as a generalization "
+				+ "of both the Euclidean distance and the Manhattan distance.\n\nNormalized Euclidean Distance:-\n"
+				+ "Normalized Euclidean Distance[u,v] is equivalent to 1/2*Norm[(u-Mean[u])-(v-Mean[v])]^2/(Norm[u-Mean[u]]^2+Norm[v-Mean[v]]^2)."
+				+ "\n\nPearson Correlation Coefficient:-\nPearson Correlation measures the similarity in shape between "
+				+ "two profiles.\nFormula: d = 1 - r\nwhere  r = Z(x)·Z(y)/n.\n\n*Euclidean Distance selected by default");
 	}
 
 	private void clustAlgo(Shell shlClustbox) {
@@ -214,28 +240,36 @@ public class CBMain {
 		simpleKMeans = new Button(grpClustAlgo, SWT.RADIO);
 		simpleKMeans.setBounds(10, 35, 120, 16);
 		simpleKMeans.setText("Simple K-means");
+		simpleKMeans.setToolTipText(
+				"Basic K-means clustering aims to partition the given input data into k clusters, where either value of k  (number of clusters field) or the initial centroids source(centroids source field) is given.");
 		selAlgo(simpleKMeans);
 
 		iterativeKMeans = new Button(grpClustAlgo, SWT.RADIO);
 		iterativeKMeans.setBounds(10, 70, 120, 16);
 		iterativeKMeans.setText("Iterative K-means");
+		iterativeKMeans.setToolTipText(
+				"Consists of two variation of k-means clustering evaluation i.e, Best Centroids evalauation,in which, for a given K value, the best initial centroids are evaluated based on the Silhouette Coefficient as the evalauation parameter.\nAnd another one is Best Centroids along with best K evaluation, in which, including the best centroids, the best possible number of clusters is evaluated using the same Silhouette Coefficient as the evalauation parameter.");
 		selAlgo(iterativeKMeans);
 
 		sameSizedKMeans = new Button(grpClustAlgo, SWT.RADIO);
 		sameSizedKMeans.setBounds(360, 35, 120, 16);
 		sameSizedKMeans.setText("Same-sized K-means");
+		sameSizedKMeans.setToolTipText("K-means variation that produces clusters of the same size.");
 		selAlgo(sameSizedKMeans);
 
 		simpleKMedoids = new Button(grpClustAlgo, SWT.RADIO);
 		simpleKMedoids.setBounds(180, 35, 120, 16);
 		simpleKMedoids.setText("Simple K-medoids");
+		simpleKMedoids.setToolTipText(
+				"Basic K-medoids Basic k-Medoids clustering aims to partition the given input data into k clusters, where either value of k  (number of clusters field) or the initial centroids source(centroids source field) is given.");
 		selAlgo(simpleKMedoids);
 
 		iterativeKMedoids = new Button(grpClustAlgo, SWT.RADIO);
 		iterativeKMedoids.setBounds(180, 70, 120, 16);
 		iterativeKMedoids.setText("Iterative K-medoids");
+		iterativeKMedoids.setToolTipText(
+				"Consists of two variation of k-Medoids clustering evaluation i.e, Best Centroids evalauation,in which, for a given K value, the best initial centroids are evaluated based on the Silhouette Coefficient as the evalauation parameter.\nAnd another one is Best Centroids along with best K evaluation, in which, including the best centroids, the best possible number of clusters is evaluated using the same Silhouette Coefficient as the evalauation parameter.");
 		selAlgo(iterativeKMedoids);
-
 	}
 
 	private void selAlgo(Button radioBtn) {
@@ -397,35 +431,55 @@ public class CBMain {
 	}
 
 	private void createMetrics(Group grpAdditionalMetrices) {
+		Composite c = new Composite(grpAdditionalMetrices, SWT.NONE);
+		c.setLayoutData(new GridData());
+		c.setLayout(new FillLayout());
+
 		sc = new Button(grpAdditionalMetrices, SWT.CHECK);
 		sc.setBounds(20, 35, 140, 16);
 		sc.setText("Silhouette Coefficient");
+		sc.setToolTipText(
+				"The silhouette value is a measure of how similar an object is to its own cluster (cohesion) compared to other clusters (separation).\n\n*Silhouette Coefficient by default selected.");
 		sc.setSelection(true);
 		sc.setEnabled(false);
+		sc.getParent().setToolTipText(sc.getToolTipText());
 
 		sse = new Button(grpAdditionalMetrices, SWT.CHECK);
 		sse.setBounds(20, 70, 140, 16);
 		sse.setText("Sum Of Squared Errors");
+		sse.setToolTipText(
+				"Sum of Squared Errors is the sum of the squared differences between each observation and its group's mean.\n\n*Silhouette Coefficient by default selected.");
 
 		scs = new Button(grpAdditionalMetrices, SWT.CHECK);
 		scs.setBounds(20, 105, 170, 16);
 		scs.setText("Sum Of Centroid Similarities");
+		scs.setToolTipText(
+				"Sum Of Centroid Similarities is equivalent to average similarity of all pairs of data points from different clusters.\n\n*Silhouette Coefficient by default selected.");
 
 		aic = new Button(grpAdditionalMetrices, SWT.CHECK);
 		aic.setBounds(20, 140, 93, 16);
 		aic.setText("AIC");
+		aic.setToolTipText(
+				"Measure of the relative quality of models for a given set of data.\n\n*Silhouette Coefficient by default selected.");
 
 		bic = new Button(grpAdditionalMetrices, SWT.CHECK);
 		bic.setBounds(20, 175, 119, 16);
 		bic.setText("BIC");
+		bic.setToolTipText(
+				"The criterion for model selection among a finite set of models; the model with the lowest BIC is preferred.\n\n*Silhouette Coefficient by default selected.");
 
 		cindex = new Button(grpAdditionalMetrices, SWT.CHECK);
 		cindex.setBounds(20, 210, 93, 16);
 		cindex.setText("C-index");
+		cindex.setToolTipText(
+				"The C-index measure to what extent the clustering put together th N points that are the closest across the K clusters, it ranges from 0.5 to 1.\n\n*Silhouette Coefficient by default selected.");
 
+		String html = "This is an internal evaluation scheme, where the validation of how well the clustering has been done is made using quantities and features inherent to the dataset.\n\n*Silhouette Coefficient by default selected.";
 		dbIndex = new Button(grpAdditionalMetrices, SWT.CHECK);
 		dbIndex.setBounds(20, 245, 170, 16);
 		dbIndex.setText("Davies-Bouldin index");
+		dbIndex.setToolTipText(html);
+
 	}
 
 	private void runCB(Shell shlClustbox) {
@@ -594,6 +648,7 @@ public class CBMain {
 
 		dataFile = new Text(grpSourceFile, SWT.BORDER);
 		dataFile.setBounds(100, 30, 270, 25);
+		dataFile.setToolTipText("Browse main data source file.");
 		ModifyListener listener = runBtnStatus();
 		dataFile.addModifyListener(listener);
 
